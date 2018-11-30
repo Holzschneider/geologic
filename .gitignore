@@ -1,0 +1,10 @@
+# Eclipse
+/target/
+.settings
+.classpath
+.project
+.externalToolBuilders
+
+# IntelliJ
+.idea
+/bin/
