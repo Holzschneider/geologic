@@ -38,14 +38,6 @@ public interface CartesianMap<T> extends Map<Location, T> {
 }
 
 
-interface CursorMap<T> extends CartesianMap<T> {
-
-
-	public CartesianMap<T> approach(Location l);
-	public CartesianMap<T> approach(Region l);
-}
-
-
 
 
 

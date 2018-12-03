@@ -11,4 +11,27 @@ public class Location {
 		this.x = x; 
 		this.y = y; 
 	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == this) return true;
+		else if (obj instanceof Location)
+			return this.equals((Location)obj);
+			else return false;
+	}
+	
+	public boolean equals(Location that) {
+		return this.x == that.x && this.y == that.y;
+	}
+	
+	@Override
+	public int hashCode() {
+		return Double.hashCode(this.x)^Double.hashCode(this.y);
+	}
+
+	@Override
+	public String toString() {
+		return "Location( "+x+", "+y+" )";
+	}
+	
 }
