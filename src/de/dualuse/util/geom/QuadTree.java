@@ -33,6 +33,13 @@ class Leaf<T> extends Bud<T> {
 			return super.put(minX, maxX, minY, maxY, this).put(minX, maxX, minY, maxY, that);
 	}
 
+	@Override
+	Leaf<T> rm(double minX, double maxX, double minY, double maxY, Location key) {
+		if (key.equals(this.key)) 
+			return this;
+		else 
+			return null;
+	}
 }
 
 
@@ -44,34 +51,34 @@ abstract class Triplet<T> extends Pair<T> {
 
 class Triplet012<T> extends Triplet<T> {
 	Triplet012(Node<T> n, Node<T> m, Node<T> o) { super(n, m, o); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b,c); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a,b.put(cx, maxX, minY, cy, l),c); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a,b,c.put(minX, cx, cy, maxY, l)); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Quadruplet<T>(a,b,c,l); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b,c); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a,b.put(cx, maxX, minY, cy, l),c); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a,b,c.put(minX, cx, cy, maxY, l)); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Quadruplet<T>(a,b,c,l); }
 }
 
 class Triplet013<T> extends Triplet<T> {
 	Triplet013(Node<T> n, Node<T> m, Node<T> o) { super(n, m, o); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b,c); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a,b.put(cx, maxX, minY, cy, l),c); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Quadruplet<T>(a,b,l,c); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b,c.put(cx, maxX, cy, maxY, l)); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b,c); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a,b.put(cx, maxX, minY, cy, l),c); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Quadruplet<T>(a,b,l,c); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b,c.put(cx, maxX, cy, maxY, l)); }
 }
 
 class Triplet023<T> extends Triplet<T> {
 	Triplet023(Node<T> n, Node<T> m, Node<T> o) { super(n, m, o); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b,c); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Quadruplet<T>(a,l,b,c); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a,b.put(minX, cx, cy, maxY, l),c); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b,c.put(cx, maxX, cy, maxY, l)); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b,c); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Quadruplet<T>(a,l,b,c); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a,b.put(minX, cx, cy, maxY, l),c); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b,c.put(cx, maxX, cy, maxY, l)); }
 }
 
 class Triplet123<T> extends Triplet<T> {
 	Triplet123(Node<T> n, Node<T> m, Node<T> o) { super(n, m, o); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Quadruplet<T>(l,a,b,c); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a.put(cx, maxX, minY, cy, l),b,c); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a,b.put(minX, cx, cy, maxY, l),c); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b,c.put(cx, maxX, cy, maxY, l)); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Quadruplet<T>(l,a,b,c); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a.put(cx, maxX, minY, cy, l),b,c); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a,b.put(minX, cx, cy, maxY, l),c); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b,c.put(cx, maxX, cy, maxY, l)); }
 }
 
 
@@ -83,51 +90,51 @@ abstract class Pair<T> extends Single<T> {
 
 class Pair01<T> extends Pair<T> {
 	public Pair01(Node<T> a, Node<T> b) { super(a, b); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a,b.put(cx, maxX, minY, cy, l)); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Triplet012<T>(a,b,l); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Triplet013<T>(a,b,l); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a,b.put(cx, maxX, minY, cy, l)); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Triplet012<T>(a,b,l); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Triplet013<T>(a,b,l); }
 }
 
 class Pair02<T> extends Pair<T> {
 	public Pair02(Node<T> a, Node<T> b) { super(a, b); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Triplet012<T>(a,l,b); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a,b.put(minX, cx, cy, maxY, l)); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Triplet023<T>(a,b,l); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Triplet012<T>(a,l,b); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a,b.put(minX, cx, cy, maxY, l)); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Triplet023<T>(a,b,l); }
 }
 
 class Pair03<T> extends Pair<T> {
 	Pair03(Node<T> a, Node<T> b) { super(a, b); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Triplet013<T>(a,l,b); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Triplet023<T>(a,l,b); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b.put(cx, maxX, cy, maxY, l)); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l),b); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Triplet013<T>(a,l,b); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Triplet023<T>(a,l,b); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b.put(cx, maxX, cy, maxY, l)); }
 }
 
 class Pair12<T> extends Pair<T> {
 	Pair12(Node<T> a, Node<T> b) { super(a, b); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Triplet012<T>(l,a,b); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a.put(cx, maxX, minY, cy, l),b); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a,b.put(minX, cx, cy, maxY, l)); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Triplet123<T>(a,b,l); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Triplet012<T>(l,a,b); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a.put(cx, maxX, minY, cy, l),b); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a,b.put(minX, cx, cy, maxY, l)); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Triplet123<T>(a,b,l); }
 }
 
 
 class Pair13<T> extends Pair<T> {
 	Pair13(Node<T> a, Node<T> b) { super(a, b); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Triplet012<T>(l,a,b); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a.put(cx, maxX, minY, cy, l),b); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Triplet123<T>(a,b,l); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b.put(cx, maxX, cy, maxY, l)); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Triplet012<T>(l,a,b); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a.put(cx, maxX, minY, cy, l),b); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Triplet123<T>(a,b,l); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b.put(cx, maxX, cy, maxY, l)); }
 }
 
 class Pair23<T> extends Pair<T> {
 	Pair23(Node<T> a, Node<T> b) { super(a, b); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Triplet023<T>(l,a,b); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Triplet123<T>(l,a,b); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a.put(minX, cx, cy, maxY, l),b); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b.put(cx, maxX, cy, maxY, l)); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Triplet023<T>(l,a,b); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Triplet123<T>(l,a,b); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a.put(minX, cx, cy, maxY, l),b); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a,b.put(cx, maxX, cy, maxY, l)); }
 }
 
 
@@ -141,44 +148,46 @@ abstract class Single<T> extends Node<T> {
 
 class Single0<T> extends Single<T> {
 	Single0(Node<T> n) { super(n); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l)); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Pair01<T>(a,l); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Pair02<T>(a,l); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Pair03<T>(a,l); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return set(a.put(minX, cx, minY, cy, l)); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Pair01<T>(a,l); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Pair02<T>(a,l); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Pair03<T>(a,l); }
 }
 
 
 class Single1<T> extends Single<T> {
 	public Single1(Node<T> n) { super(n); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Pair01<T>(l,a); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a.put(cx, maxX, minY, cy, l)); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Pair12<T>(a,l); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Pair13<T>(a,l); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Pair01<T>(l,a); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return set(a.put(cx, maxX, minY, cy, l)); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Pair12<T>(a,l); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Pair13<T>(a,l); }
 }
 
 
 class Single2<T> extends Single<T> {
 	public Single2(Node<T> n) { super(n); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Pair02<T>(l,a); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Pair12<T>(l,a); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a.put(minX, cx, cy, maxY, l)); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Pair23<T>(a,l); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Pair02<T>(l,a); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Pair12<T>(l,a); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return set(a.put(minX, cx, cy, maxY, l)); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Pair23<T>(a,l); }
 }
 
 
 class Single3<T> extends Single<T> {
 	Single3(Node<T> n) { super(n); }
-	Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Pair03<T>(l,a); }
-	Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Pair13<T>(l,a); }
-	Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Pair23<T>(l,a); }
-	Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a.put(cx, maxX, cy, maxY,l)); }
+	Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Pair03<T>(l,a); }
+	Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Pair13<T>(l,a); }
+	Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Pair23<T>(l,a); }
+	Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return set(a.put(cx, maxX, cy, maxY,l)); }
 }
 
 class Bud<T> extends Node<T> {
-	@Override Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Single0<T>(l); }
-	@Override Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Single1<T>(l); }
-	@Override Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Single2<T>(l); }
-	@Override Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Single3<T>(l); }
+	@Override Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l) { return new Single0<T>(l); }
+	@Override Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l) { return new Single1<T>(l); }
+	@Override Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l) { return new Single2<T>(l); }
+	@Override Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l) { return new Single3<T>(l); }
+	
+	@Override Leaf<T> rm(double minX, double maxX, double minY, double maxY, Location key) { return null; }
 }
 
 
@@ -189,23 +198,39 @@ class Quadruplet<T> extends Triplet<T> {
 	Quadruplet(Node<T> a, Node<T> b, Node<T> c, Node<T> d) { super(a,b,c); this.d = d; }
 	Node<T> set(Node<T> a, Node<T> b, Node<T> c, Node<T> d) { this.a=a; this.b=b; this.c=c; this.d=d; return this; }
 	
-	Node<T> ul(double x0, double xc, double y0, double yc, Leaf<T> l) { return set(a.put(x0, xc, y0, yc, l), b, c, d); }
-	Node<T> ur(double xc, double x1, double y0, double yc, Leaf<T> l) { return set(a, b.put(xc, x1, y0, yc, l), c, d); }
-	Node<T> ll(double x0, double xc, double yc, double y1, Leaf<T> l) { return set(a, b, c.put(x0, xc, yc, y1, l), d); }
-	Node<T> lr(double xc, double x1, double yc, double y1, Leaf<T> l) { return set(a, b, c, d.put(xc, x1, yc, y1, l)); }
+	Node<T> add0(double x0, double xc, double y0, double yc, Leaf<T> l) { return set(a.put(x0, xc, y0, yc, l), b, c, d); }
+	Node<T> add1(double xc, double x1, double y0, double yc, Leaf<T> l) { return set(a, b.put(xc, x1, y0, yc, l), c, d); }
+	Node<T> add2(double x0, double xc, double yc, double y1, Leaf<T> l) { return set(a, b, c.put(x0, xc, yc, y1, l), d); }
+	Node<T> add3(double xc, double x1, double yc, double y1, Leaf<T> l) { return set(a, b, c, d.put(xc, x1, yc, y1, l)); }
 }
 
 
 abstract class Node<T> {
-	protected Node<T> put(double minX, double maxX, double minY, double maxY, Leaf<T> l) {
+	Node<T> rm(double minX, double maxX, double minY, double maxY, Location key) {
+		return null;
+	}
+//	{
+//		final double x = key.x, y = key.y;
+//		final double cx = (minX+maxX)/2, cy = (minY+maxY)/2;
+//		if (minX<=x && x<maxX && minY<=y && y<=maxY) 
+//			switch ((x<cx?1:0) | (y<cy?2:0)) {
+//			case 0: return remove(minX, cx, minY, cy, l);
+//			case 1: return ur(cx, maxX, minY, cy, l);
+//			case 2: return ll(minX, cx, cy, maxY, l);
+//			case 3: return lr(cx, maxX, cy, maxY, l);
+//			}
+//		return null;
+//	}
+	
+	Node<T> put(double minX, double maxX, double minY, double maxY, Leaf<T> l) {
 		final double x = l.key.x, y = l.key.y;
 		final double cx = (minX+maxX)/2, cy = (minY+maxY)/2;
 		if (minX<=x && x<maxX && minY<=y && y<=maxY) 
 			switch ((x<cx?1:0) | (y<cy?2:0)) {
-			case 0: return ul(minX, cx, minY, cy, l);
-			case 1: return ur(cx, maxX, minY, cy, l);
-			case 2: return ll(minX, cx, cy, maxY, l);
-			case 3: return lr(cx, maxX, cy, maxY, l);
+			case 0: return add0(minX, cx, minY, cy, l);
+			case 1: return add1(cx, maxX, minY, cy, l);
+			case 2: return add2(minX, cx, cy, maxY, l);
+			case 3: return add3(cx, maxX, cy, maxY, l);
 			}
 		else
 			throw new IllegalArgumentException(); 
@@ -213,10 +238,10 @@ abstract class Node<T> {
 		return this;
 	}
 	
-	abstract Node<T> ul(double minX, double cx, double minY, double cy, Leaf<T> l);
-	abstract Node<T> ur(double cx, double maxX, double minY, double cy, Leaf<T> l);
-	abstract Node<T> ll(double minX, double cx, double cy, double maxY, Leaf<T> l);
-	abstract Node<T> lr(double cx, double maxX, double cy, double maxY, Leaf<T> l);
+	abstract Node<T> add0(double minX, double cx, double minY, double cy, Leaf<T> l);
+	abstract Node<T> add1(double cx, double maxX, double minY, double cy, Leaf<T> l);
+	abstract Node<T> add2(double minX, double cx, double cy, double maxY, Leaf<T> l);
+	abstract Node<T> add3(double cx, double maxX, double cy, double maxY, Leaf<T> l);
 }
 
 

@@ -1,708 +1,518 @@
 package de.dualuse.util.geom;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.Set;
+import java.util.function.Consumer;
 
-public class DelaunayTriangulation {
+/**
+ * <b>Edge - Delaunay Map-Collection</b><br/ >
+ * !!! Vorversion, nicht an Dritte weitergeben !!!<p />
+ * 
+ * (c) Philipp Holzschneider - Kommentare und veränderte Fassungen  
+ * an philipp.holzschneider[at]inf.fu-berlin.de.<p />
+ * 
+ * Edge repräsentiert eine DCEL-Halbkante eines zusammenhängenden 
+ * planaren Graphen. Der entlang verketteter Edges erreichbare Graph 
+ * über eingefügte Container-Knoten (vom Typ Vertex), stellt in Grundzügen 
+ * eine Map-Collection dar, die 2D-Koordinatenschlüssel Objekte vom Typ T
+ * zuordnet. Edge bietet unter anderem die klassischen Map-Methoden 
+ * put, remove und get, die auf dem erreichbaren Graph ausgeführt werden.<p />  
+ * 
+ * Der intern inkrementell erzeugte Graph über eingefügte 
+ * Schlüssel-Werte-Paare ist eine vollwertige Delaunay-Triangulierung.
+ * Bereichs-, Punkt- und Umfeldabfragen können so unter Nutzung der
+ * Triangulierungseigenschaften effizient gestaltet werden.<p />
+ * 
+ * Die Triangulierung baut inkrementell auf der Trivialtriangulierung
+ * von vier intern erzeugten Grenzknoten auf. Eine standalone Edge 
+ * kann dabei nur unter Angabe einer rechteckigen Begrenzung erzeugt 
+ * werden. (Einfügeoperationen mit Schlüsselkoordinaten ausserhalb
+ * der Begrenzung überführen die Datenstruktur in einen undefinierten
+ * Zustand).<br />
+ * Halbkanten zwischen zwei Begrenzungsknoten haben keine Umkehrkante.
+ * Die Begrenzungsknoten haben keinen abgelegten Wert (getValue()==null).<p />
+ *
+ * <pre>
+ * a <--- d 
+ * |`\    ^   <- Ascii Bild einer Trivialtriangulierung
+ * | \\   |
+ * |  \\  |
+ * ,   \\ |
+ * b --->`c
+ * </pre><p />
+ * 
+ * (Zukünftige Versionen werden möglicherweise dieser 
+ * Beschränkung nicht mehr unterlegen)<p />
+ * 
+ * Die meisten der global auf den Graph bezogenen Methoden von Edge
+ * liefern eine Zielkante Edge, die direkt an der modifizierten 
+ * Stelle im Graph anliegt (O(1)-Entfernung). Von dieser Zielkante aus 
+ * können lokale Folgeoperationen so ohne wiederholte Suchkosten 
+ * durchgeführt werden.<p />
+ * 
+ * <b>BUGFIXES BUGFIXES BUGFIXES BUGFIXES BUGFIXES BUGFIXES</b>
+ * 
+ * <i>20071203</i>: Add ersetzt den Wert eines Knoten für einen Koordinatenschlüssel (x,y),
+ * sofern an exakt dieser Position bereits ein Wert hinterlegt wurde. -> Rename to put.
+ * 
+ * 
+ * @author Philipp Holzschneider
+ */
+
+class BoundaryEdge<T> extends Edge<T> {
+	private static final long serialVersionUID = 1L;
+
 	
-	static public class Monitor {
-		public int allocationCounter = 0, accessCounter = 0;
-		
-		public int getAllocationCounter() { return allocationCounter; }
-		public int getAccessCounter() { return accessCounter; }
-		
-		public void reset() {allocationCounter =0; accessCounter = 0;};
-		public void allocation() { allocationCounter++; }
-		public void access() { accessCounter++; };
-	};
+}
 
-	public static interface TriangleVisitor<T> {
-		public void meet(Vertex<T> a, Vertex<T> b, Vertex<T> c);
+
+class Edge<T> implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
+	Vertex<T> node;
+	Edge<T> next=null, prev=null, twin=null;
+	transient Edge<T> last=null;
+	
+	
+	@Override
+	public String toString() {
+		return "Edge( -> "+node.x+" "+node.y+" -> "+next.node.x+" "+next.node.y+" -> "+prev.node.x+" "+prev.node.y+" -> )";
 	}
 	
-	static public<T> int triangles(TriangleVisitor<T> tm, Deque<Edge<T>> todo, Set<Edge<T>> done ) {
-		int triangleCounter = 0;
-		
-		while (!todo.isEmpty()) {
-			Edge<T> e = todo.pop();
-			
-			Vertex<T> v1 = (e = e.getNext()).getVertex();
-			Vertex<T> v2 = (e = e.getNext()).getVertex();
-			Vertex<T> v3 = (e = e.getNext()).getVertex();
-
-			T p1 = v1.getValue(), p2 = v2.getValue(), p3 = v3.getValue();
-			if (p1!=null && p2!=null && p3!=null) 
-			{ 
-				tm.meet( v1, v2, v3 );
-				triangleCounter++;
-			}
-						
-			done.add(e=e.getNext());
-			done.add(e=e.getNext());
-			done.add(e=e.getNext());
 	
-			for (int i=0;i<3;i++)
-				if (!done.contains((e=e.getNext()).getInverse())) { 
-		 			if (e.getInverse()!=null) { 
-						todo.push(e.getInverse());
-						done.add(e.getInverse());
-						done.add(e.getInverse().getNext());
-						done.add(e.getInverse().getPrevious());
-					}
-				}			
-		}
-		
-		return triangleCounter;
-	}
 	
-	public static interface Vertex<T> {
-		public double getX();
-		public double getY();
-		public T getValue();
-		public T setValue( T v );
-		
-		public<Q extends Collection<? super Vertex<T>>> Q getNeighbors(Q q);
-		
-		/**
-		 * Entfernt den Knoten aus der Triangulierung.
-		 * @return eine Kante in der angepassten Triangulierung
-		 */
-		public Edge<T> remove();
-	}
-	
-	/**
-	 * Interner Containerknoten. Speichert Koordinaten-Schlüssel und 
-	 * Wert als direktreferenzen. Implementiert das Knoteninterface Vertex
-	 * welches alle Zugriffsfunktionen spezifiziert.
-	 */
-	private static class EntryVertex<T> implements Vertex<T>, Serializable {
-		private static final long serialVersionUID = 1L;
-
-		/**
-		 * Koordinaten-Schlüssel
-		 */
-		private double x, y;
-
-		/**
-		 * Wertreferenz
-		 */
-		private T value;
-
-		/**
-		 * Halbkante des Sterns des Knotens mit 
-		 * this.star.getVertex() == this;
-		 */
-		private Edge<T> star;
-		
-		public double getX() { return x; }
-		public double getY() { return y; }
-		public T getValue() { return value; }
-		public T setValue(T v) {
-			T old = value;
-			value = v;
-			return old;
-		}
-		
-		public EntryVertex(double x, double y, T v) {
-			this.x = x;
-			this.y = y;
-			this.value = v; 
-		}
-		
-		public Edge<T> remove() { return star.remove(); }
-		
-		
-		/**
-		 * Fügt einer gegebenen Collection alle direkt benachbarten
-		 * Vertices hinzu. Fügt keine Randknoten hinzu.
-		 */
-		public<Q extends Collection<? super Vertex<T>>> Q getNeighbors(Q q) {
-
-			//Startzeiger für Umläufe im und gegen den Uhrzeigersinn
-			Edge<T> l = star.i, r = star;
-
-			do { //umlaufschleife 
-				if (l!=null) { 
-					//l!=null? dann zeigt l auf einen direkten Nachbarn
-					
-					if (l.v!=null) //evtl ist es eine Aussenrandkante
-						q.add(l.v);
-					
-					l= l.p.i; //der vorgänger ist daher nicht null und 
-					//zeigt also wieder auf this und hat evtl. eine Inverskante 
-				}
-				
-				if (r!=null) { 
-					//dann zeigt der Nachfolger auf einen direkten Nachbarn
-					
-					if (r.n.v!=null) //evtl ist es eine Aussenrandkante
-						q.add(r.n.v); //nicht? dann den Knoten mitnehmen
-					
-					//der Nachfolger hat evtl eine Inverse
-					r=r.n.i;
-				}
-				
-				//solange bis...
-				//beide null sind oder identisch.. ka funktioniert aber
-			} while ( (l!=null && l.i!=r) || (r!=null && r.i!=l) );
-			
-			
-			return q;
-		}
+	public Edge(Bounds extent) {
+		this(extent.x, extent.y);
 	}
 	
 	/**
-	 * keine Ahnung wieso ich einen extra BoundingVertex-Typ nutze.
+	 * Erzeugt eine leeren Graphcontainer. Leere Grenzknoten und Kanten bilden eine 
+	 * Trivialtriangulierung des gegebenen Rechtecks. Die erzeugte Kante liegt 
+	 * entlang der Diagonalen.
 	 */
-	private static class BoundingVertex<T> extends EntryVertex<T> {
-		private static final long serialVersionUID = 1L;
-		public BoundingVertex(double x, double y) { super(x,y,null); };
+	public Edge(Range x, Range y) {
+		double minX = x.min, minY = y.min;
+		double maxX = x.max, maxY = y.max;
+		
+		//Grenzknoten
+		Vertex<T> a = new BoundingVertex<T>(minX,minY);
+		Vertex<T> b = new BoundingVertex<T>(minX,maxY);
+		Vertex<T> c = new BoundingVertex<T>(maxX,maxY);
+		Vertex<T> d = new BoundingVertex<T>(maxX,minY);
+		
+		
+		//Dreieck1
+		Edge<T> e = this, f = new Edge<T>(), g = new Edge<T>();
+		
+		(e.node = a).star=e;
+		(f.node = b).star=f;
+		(g.node = c).star=g;
+		((e.next = f).next = g).next = e;
+		((e.prev = g).prev = f).prev = e;
+		
+		//Dreieck2
+		Edge<T> h = new Edge<T>(), i = new Edge<T>(), j = new Edge<T>();
+		
+		h.node = a;
+		i.node = c;
+		(j.node = d).star=j;
+		((h.next = i).next = j).next = h;
+		((h.prev = j).prev = i).prev = h;
+		
+		(i.twin = e).twin=i;
 	}
 	
-	/**
-	 * <b>Edge - Delaunay Map-Collection</b><br/ >
-	 * !!! Vorversion, nicht an Dritte weitergeben !!!<p />
-	 * 
-	 * (c) Philipp Holzschneider - Kommentare und veränderte Fassungen  
-	 * an philipp.holzschneider[at]inf.fu-berlin.de.<p />
-	 * 
-	 * Edge repräsentiert eine DCEL-Halbkante eines zusammenhängenden 
-	 * planaren Graphen. Der entlang verketteter Edges erreichbare Graph 
-	 * über eingefügte Container-Knoten (vom Typ Vertex), stellt in Grundzügen 
-	 * eine Map-Collection dar, die 2D-Koordinatenschlüssel Objekte vom Typ T
-	 * zuordnet. Edge bietet unter anderem die klassischen Map-Methoden 
-	 * put, remove und get, die auf dem erreichbaren Graph ausgeführt werden.<p />  
-	 * 
-	 * Der intern inkrementell erzeugte Graph über eingefügte 
-	 * Schlüssel-Werte-Paare ist eine vollwertige Delaunay-Triangulierung.
-	 * Bereichs-, Punkt- und Umfeldabfragen können so unter Nutzung der
-	 * Triangulierungseigenschaften effizient gestaltet werden.<p />
-	 * 
-	 * Die Triangulierung baut inkrementell auf der Trivialtriangulierung
-	 * von vier intern erzeugten Grenzknoten auf. Eine standalone Edge 
-	 * kann dabei nur unter Angabe einer rechteckigen Begrenzung erzeugt 
-	 * werden. (Einfügeoperationen mit Schlüsselkoordinaten ausserhalb
-	 * der Begrenzung überführen die Datenstruktur in einen undefinierten
-	 * Zustand).<br />
-	 * Halbkanten zwischen zwei Begrenzungsknoten haben keine Umkehrkante.
-	 * Die Begrenzungsknoten haben keinen abgelegten Wert (getValue()==null).<p />
-	 *
-	 * <pre>
-	 * a <--- d 
-	 * |`\    ^   <- Ascii Bild einer Trivialtriangulierung
-	 * | \\   |
-	 * |  \\  |
-	 * ,   \\ |
-	 * b --->`c
-	 * </pre><p />
-	 * 
-	 * (Zukünftige Versionen werden möglicherweise dieser 
-	 * Beschränkung nicht mehr unterlegen)<p />
-	 * 
-	 * Die meisten der global auf den Graph bezogenen Methoden von Edge
-	 * liefern eine Zielkante Edge, die direkt an der modifizierten 
-	 * Stelle im Graph anliegt (O(1)-Entfernung). Von dieser Zielkante aus 
-	 * können lokale Folgeoperationen so ohne wiederholte Suchkosten 
-	 * durchgeführt werden.<p />
-	 * 
-	 * <b>BUGFIXES BUGFIXES BUGFIXES BUGFIXES BUGFIXES BUGFIXES</b>
-	 * 
-	 * <i>20071203</i>: Add ersetzt den Wert eines Knoten für einen Koordinatenschlüssel (x,y),
-	 * sofern an exakt dieser Position bereits ein Wert hinterlegt wurde. -> Rename to put.
-	 * 
-	 * 
-	 * @author Philipp Holzschneider
-	 */
-
-
-	public static class Edge<T> implements Serializable {
-
-		private static final long serialVersionUID = 1L;
-
 	
-		
-
-		/**
-		 * für Debugzwecke
-		 */
-//		int drawStamp;
-		
-		/**
-		 * Zielknoten
-		 */
-		private EntryVertex<T> v;
-		
-		/**
-		 * Nachfolger n, Vorgänger p, Umkehrkante i 
-		 */
-		private Edge<T> n=null, p=null, i=null;
-		
-		/**
-		 * Zuvoreingefügte Kante l
-		 */
-		private transient Edge<T> l=null;
-		
-		/**
-		 * Zugriffsmonitor m
-		 */
-		private transient Monitor m;
-
-		/**
-		 * @return Knoten auf den die Halbkante zeigt
-		 */
-		public Vertex<T> getVertex() { return v; }
-		
-		/**
-		 * @return Vorgängerkante
-		 */
-		public Edge<T> getPrevious() { return p; }
-		
-		/**
-		 * @return Nachfolgerkante
-		 */
-		public Edge<T> getNext() { return n; }
-		
-		/**
-		 * @return Umkehrkante
-		 */
-		public Edge<T> getInverse() { return i; }
-		
-		/**
-		 * Erzeugt eine leeren Graphcontainer. Leere Grenzknoten und Kanten bilden eine 
-		 * Trivialtriangulierung des gegebenen Rechtecks. Die erzeugte Kante liegt 
-		 * entlang der Diagonalen.
-		 */
-//		public Edge(Rectangle2D r) { this(r.getX(),r.getY(),r.getWidth(),r.getHeight(), new Monitor()); };
-//		public Edge(Rectangle2D r,Monitor m) { this(r.getX(),r.getY(),r.getWidth(),r.getHeight(),m); };
-		
-		public Edge(double x, double y, double width, double height) { this(x,y,width,height, new Monitor()); } 
-		public Edge(double x, double y, double width, double height, Monitor m) {
-			this.m = m;
-			//Grenzknoten
-			EntryVertex<T> a = new BoundingVertex<T>(x,y);
-			EntryVertex<T> b = new BoundingVertex<T>(x,y+height);
-			EntryVertex<T> c = new BoundingVertex<T>(x+width,y+height);
-			
-			EntryVertex<T> d = new BoundingVertex<T>(x+width,y);
-			
-			//Dreieck1
-			Edge<T> e = this, f = newEdge(), g = newEdge();
-			
-			(e.v = a).star=e;
-			(f.v = b).star=f;
-			(g.v = c).star=g;
-			((e.n = f).n = g).n = e;
-			((e.p = g).p = f).p = e;
-			
-			//Dreieck2
-			Edge<T> h = newEdge(), i = newEdge(), j = newEdge();
-			
-			h.v = a;
-			i.v = c;
-			(j.v = d).star=j;
-			((h.n = i).n = j).n = h;
-			((h.p = j).p = i).p = h;
-			
-			(i.i = e).i=i;
-		}
-		
-		/**
-		 * interner Konstruktor neuer Kanten, ohne Zugriff für Aussenstehende,
-		 * um die Integrität der Triangulierung garantieren zu können 
-		 */
-		private Edge() {}
-		
-		/**
-		 * Monitorüberwachter Allokator, setzt den selbst verwendeten Monitor
-		 * auch in der neuerzeugnten Kante. Eine Allokation wird verbucht 
-		 */
-		private Edge<T> newEdge() {
-			Edge<T> e = new Edge<T>();
-			(e.m = m).allocation();
-			return e;
-		};
-
-		/**
-		 * Entfernt den Knoten auf den die Kante zeigt aus dem Graphen.
-		 * Dabei wird auch zwangsläufig die Kante aus dem Graphen entfernt, da 
-		 * sie Teil des Sterns des zu entfernenden Knotens ist. Der sternförmige 
-		 * Loch-Bereich des Graphen wird retrianguliert, die Delaunay-Eigenschaft
-		 * wird anschließend wieder hergestellt.
-		 *    
-		 * @return einen gültige Kantenreferenz. Zeigt auf die zuletzt 
-		 * korrigierte Randkante des retriangulierten Sternlochs.   
-		 */	
-		public Edge<T> remove() {
-			/*
-			 * 1. Punkt löschen und dabei das loch-Polygon sauber herstellen
-			 * 2. Lochpolygon ist stern, mit einzelecken, Triangulieren durch ecken abschneiden
-			 * 		http://www.iue.tuwien.ac.at/phd/fasching/node83.html <- OMFG fehlerhafter Algo
-			 * http://igitur-archive.library.uu.nl/math/2006-1212-200635/schoone_80_triangulating_a.pdf
-			 * der hier klingt besser
-			 * 3. fix.
-			 */
-			
-			
-			/////////// 1
-			Edge<T> s = this; //Laufreferenz
-
-			//Knotenkoordinaten (im Kernel des Sternlochs)
-			final double x = s.v.getX(), y = s.v.getY();
-
-			@SuppressWarnings("unused")
-			int N = 0; // Zähler der entfernten Kanten
-			
-			//Entlang der Sternkanten..
-			
-			do {
-				m.access(); //Entfernungsoperation zählen
-				
-				//Kante und Umkehrkante entfernen und 
-				//die übriggebliebenen Sternlochrandkanten 
-				//miteinander verbinden
-				final Edge<T> sin = s.i.n; 
-				final Edge<T> sp = s.p;
-
-				sin.p = sp;
-				sp.n = sin;
-				
-				s = s.i.p; 
-				
-				s.p.v.star = s.p;
-				N++; //Kante zählen
-			} while ( s!=this );
-			
-			/////////// 2
-			//das Loch ist nun "sauber" ausgeschnitten.
-			//der Graph ist keine Triangulierung mehr, aber 
-			//eine gültige DCEL
-			
-			//e zeigt auf eine Innenkante des Sternlochs 
-			Edge<T> e = s.p.n, start = e, l = null;
-			
-			//solange das Sternloch kein Dreieck ist
-			//also der nachfolger vom nachfolger des Nachfolgers von e nicht e ist
-			while (e.n.n.n!= e) { 
-				m.access(); // einen Zugriff verbuchen
-				
-				//die aufeinanderfolgneden Ecken a,b,c wählen
-				EntryVertex<T> a = e.p.v, b = e.v, c = e.n.v;
-				
-				//ist b rechts von der Strecke ab und das Sternzentrum (x,y) links davon 
-				if(	rightOf(b.getX(), b.getY(), a.getX(), a.getY(), c.getX(), c.getY()) 
-					&& 
-					leftOf(x, y, a.getX(), a.getY(), c.getX(), c.getY()) )			
-				{
-					//ist abc ein Polygonohr und kann abgeschnitten werden 
-					N--;
-					Edge<T> ca = newEdge(), ac = newEdge();
-					
-					
-					//neue Kanten ca und ac in Hinzufügereihenfolge l verketten
-					ca.l = l;
-					ac.l = ca;
-					l = ac; 
-					
-					ca.v = a; //?????
-					ca.n = e;
-					ca.p = e.n; //?
-					
-					//?????				
-					ac.v = c;
-					ac.p = e.p; //???
-					ac.n = e.n.n;
-					
-					(ca.i = ac).i = ca;
-					
-					e.n.n.p = ac; //??? :)
-					e.p.n = ac;
-					
-					e.p = ca;
-					e.n.n = ca;
-					
-					ca.v.star = ca;
-					ca.n.v.star = ca.n;
-					ca.p.v.star = ca.p;
-					
-					
-					e = ac.n;
-				} else //ansonsten 
-					e = e.n; //nächste Kante probieren
-			}
-			
-			//Delaunay-Eigenschaft aller hinzugefügten Diagonalen reparieren 
-			for (Edge<T> el = l, ell; el!=null; el = ell ) {
-				el.fix();
-				ell = el.l;
-				el.l = null; //Hinzufügereihenfolge löschen
-			}
-
-			return start; //start randkante zurückgeben
-			/**/
-		}
-		
-		
-		/**
-		 * fügt einen Wert in den Triangulierungsgraphen an der 
-		 * Schlüsselposition x,y ein. Rückgabe ist eine neuerzeugte
-		 * Kante die auf den Knoten der den Wert beinhaltet zeigt 
-		 */
-		public Edge<T> put(double x, double y, T v) {
-			if (!this.contains(x,y)) //koordinaten nicht im lokalen Dreieck
-				return locate(x,y).put(x,y,v); //add auf dem richtigen Dreieck aufrufen
-			
-			//zeigt der Koordinatenschlüssel x,y exakt auf einen der Dreiecksknoten, 
-			//wird dessen Wert ersetzt, anstatt ein neuer Knoten hinzugefügt
-			if (this.v.getX()==x && this.v.getY()==y) 
-			{ this.v.setValue(v); return this; }
-			else
-			if (this.n.v.getX()==x && this.n.v.getY()==y) 
-			{ this.v.setValue(v); return this; }
-			else
-			if (this.p.v.getX()==x && this.p.v.getY()==y) 
-			{ this.v.setValue(v); return this; };
-			
-			
-			//Wert einfügen und erzeugten Knoten merken 
-			EntryVertex<T> ev = insert(x,y,v).v; 
-			Edge<T> e = ev.star; //alle in Frage kommenden Halbkanten
-			
-			Edge<T> ep = e.p; //zuerst merken 
-			Edge<T> epi = e.p.i; //und dann
-			
-			Edge<T> ein = e.i.n; //nacheinander fixen
-			Edge<T> eini = e.i.n.i;
-			
-			Edge<T> enip = e.n.i.p;
-			Edge<T> enipi = e.n.i.p.i;
-			
-			
-			ep.fix(); //fix
-			if (epi!=null) epi.fix();
-			ein.fix();
-			if (eini!=null) eini.fix();
-			enip.fix();
-			if (enipi!=null) enipi.fix();
-			
-			//im Anschluss eine Sternkante auf den Knoten zurückgeben
-			//(kann sich durch flips verändert haben)
-			return ev.star;
-		}
-		
-		/**
-		 * Fügt direkt einen neuen Knoten in das zur Kante gehörende
-		 * Dreieck ein, ungeachtet der Einfügekoordinaten
-		 */
-		private Edge<T> insert(double x, double y, T value) {
-			m.allocation();
-			EntryVertex<T> v = new EntryVertex<T>(x,y,value);
-			
-			final Edge<T> abn = newEdge(); abn.v = v;
-			final Edge<T> abnn = newEdge(); abnn.v = n.n.v; 
-			
-			final Edge<T> bcn = newEdge(); bcn.v = v; 
-			final Edge<T> bcnn = newEdge(); bcnn.v = this.v; 
-			
-			final Edge<T> can = newEdge(); can.v = v; 
-			final Edge<T> cann = newEdge(); cann.v = n.v;
-			
-			(abn.i=bcnn).i = abn;
-			(bcn.i=cann).i = bcn;
-			(can.i=abnn).i = can;
-			
-			((n.n.n = can).n=cann).n=n.n;
-			((n.n=bcn).n=bcnn).n = n;
-			((n=abn).n=abnn).n = this;
-			
-			abn.p = abn.n.n;
-			abn.n.p = abn;
-			abn.n.n.p = abn.n;
-			
-			bcn.p = bcn.n.n;
-			bcn.n.p = bcn;
-			bcn.n.n.p = bcn.n;
-			
-			can.p = can.n.n;
-			can.n.p = can;
-			can.n.n.p = can.n;
-			
-			
-			abn.v.star=abn;
-			
-			return abn;
-		}
-
-		/**
-		 * @return true , sofern die Position des Knotens das zur Kante 
-		 * gehörende Dreieck schneidet 
-		 */
-		public boolean contains(final Vertex<?> q) { return contains(q.getX(),q.getY()); }
-		
-
-		/**
-		 * @return true , sofern der Punkt (x,y) das zur Kante gehörende 
-		 * Dreieck schneidet 
-		 */
-		public boolean contains(final double px, final double py) {
-			final EntryVertex<T> a = v, b = n.v, c = p.v;
-			return triangleIntersects(px, py, a.getX(), a.getY(), b.getX(), b.getY(), c.getX(), c.getY());
-		}
-		
-		/**
-		 * @return die Kante, die auf den Knoten zeigt, der den gegebenen 
-		 * Knoten am nächsten liegt.  
-		 */
-		public Edge<T> locate(final Vertex<?> q) { return locate(q.getX(), q.getY()); };
-		
-
-		/**
-		 * @return die Kante, die auf den Knoten zeigt, der den gegebenen 
-		 * Koordinaten am nächsten liegt.  
-		 */
-		public Edge<T> locate(final double qx, final double qy) {
-			m.access(); //Zugriff verbuchen
-			
-			if (this.contains(qx,qy)) { //wenn das Dreieck die qx,qy enthält
-				//alle (drei) in frage kommenden Knoten überprüfen
-				Edge<T> closest = this; 
-				double dx = this.v.getX()-qx, dy = this.v.getY()-qy;
-				double distanceSq = dx*dx+dy*dy;
-				
-				for (Edge<T> e = this.n;e!=this;e=e.n) {
-					dx = e.v.getX()-qx; dy = e.v.getY()-qy;
-					double dSq = dx*dx+dy*dy;
-					if (dSq>distanceSq) continue;
-					
-					closest = e;
-					distanceSq = dSq;
-				}
-				
-				return closest; //den nächsten zurückgeben
-			}
-			
-			//andernfalls weiter in Richtung Zielkoordinate wandern
-			final EntryVertex<T> a = this.v, b = n.v, c = p.v;
-			final double ax = a.getX(), ay = a.getY();
-			final double bx = b.getX(), by = b.getY();
-			final double cx = c.getX(), cy = c.getY();
-			final double mx = (ax+bx+cx)/3.0, my = (ay+by+cy)/3.0;
-			
-			//schließlich schneidet der Weg vom Dreiecksmittelpunkt
-			//zum Ziel garantiert eine Kante, die uns dem Ziel näher bringt  
-			if (linesIntersect(	mx, my, qx, qy, ax,ay, bx,by) )
-				return n.i.locate(qx,qy);
-			//else
-			if (linesIntersect(	mx, my, qx, qy, bx, by, cx, cy) )
-				return p.i.locate(qx,qy);
-			//else
-			if (linesIntersect(	mx, my, qx, qy, cx, cy, ax, ay) )
-				return this.i.locate(qx,qy);
-			
-			return null; // keine geschnitten? -> null
-		}
-		
-
-
-		/**
-		 * @return true, wenn der Umkreis des der Kante zugehörigen Dreicks 
-		 * den gegebenen Knoten enthält
-		 */
-		public boolean circumcircleContains(Vertex<T> q) { return circumcircleContains(q.getX(), q.getY()); }
-		
-		/**
-		 * @return true, wenn der Umkreis des der Kante zugehörigen Dreicks 
-		 * die gegebenen Koordinaten enthält
-		 */
-		public boolean circumcircleContains(double qx, double qy) {
-			final EntryVertex<T> a = v, b = n.v, c = p.v;
-			return insideCircumcircle(qx,qy, a.getX(),a.getY(),b.getX(),b.getY(), c.getX(), c.getY());
-		}
-		
-
-		/**
-		 * Stellt rekursiv die Delaunayeigenschaft wieder her
-		 */
-		private void fix() {
-			//existiert eine Umkehrkante und liegt der umkehrkante gegenüberliegende 
-			//Knoten im Inkreis des eigenen Dreicks 
-			if (i!=null && circumcircleContains( i.n.v.x, i.n.v.y )) {
-				flip(); //Kante flippen
-
-				Edge<T> _n = this.n;
-				Edge<T> _p = this.p;
-
-				Edge<T> _i = this.i,_in=null,_ip=null;
-
-				if (i!=null) {
-					_in = this.i.n;
-					_ip = this.i.p;
-				}
-				
-
-				_n.fix(); //fix auf nachfolgerkante
-				_p.fix(); //vorgängerkante
-				
-				if (_i!=null) { //und sofern Umkehrkante
-					_i.fix(); //auf umkehrkante 
-					_in.fix(); //nachfolger der Umkehrkante
-					_ip.fix(); //vorgänger der Umkehrkante anwenden
-				}
-			}
-		}
-		
-		/**
-		 * Kippt eine Kante.
-		 */
-		private Edge<T> flip() {
-			m.access();
-			
-			final Edge<T> _=this;
-			final Edge<T> _n=this.n;
-			final Edge<T> _p=this.p;
-
-			final Edge<T> _i=this.i;
-			final Edge<T> _in=this.i.n;
-			final Edge<T> _ip=this.i.p;
-			
-			_.v = _n.v;
-			_.n = _p;
-			_.p = _in;
-			
-			_i.v = _in.v;
-			_i.n = _ip;
-			_i.p = _n;
-			
-			
-			_p.n = _in;
-			_p.p = _;
-			
-			_in.p = _p;
-			_in.n = _;
-			
-			_ip.n = _n;
-			_ip.p = _i;
-			
-			_n.n = _i;
-			_n.p = _ip;
-
-			//fast vergessen
-			//die Stern-Garantie wieder herstellen.
-			this.v.star=this;
-			this.n.v.star=this.n;
-			this.p.v.star=this.p;
-			
-			this.i.v.star=this.i;
-			this.i.n.v.star=this.i.n;
-			this.i.p.v.star=this.i.p;			
-			
+	/**
+	 * interner Konstruktor neuer Kanten, ohne Zugriff für Aussenstehende,
+	 * um die Integrität der Triangulierung garantieren zu können 
+	 */
+	Edge() {}
+	
+	
+	/**
+	 * Entfernt den Knoten auf den die Kante zeigt aus dem Graphen.
+	 * Dabei wird auch zwangsläufig die Kante aus dem Graphen entfernt, da 
+	 * sie Teil des Sterns des zu entfernenden Knotens ist. Der sternförmige 
+	 * Loch-Bereich des Graphen wird retrianguliert, die Delaunay-Eigenschaft
+	 * wird anschließend wieder hergestellt.
+	 *    
+	 * @return einen gültige Kantenreferenz. Zeigt auf die zuletzt 
+	 * korrigierte Randkante des retriangulierten Sternlochs.   
+	 */	
+	Edge<T> remove() {
+		if (this.twin == this)
 			return this;
+		
+		/*
+		 * 1. Punkt löschen und dabei das loch-Polygon sauber herstellen
+		 * 2. Lochpolygon ist stern, mit einzelecken, Triangulieren durch ecken abschneiden
+		 * 		http://www.iue.tuwien.ac.at/phd/fasching/node83.html <- OMFG fehlerhafter Algo
+		 * http://igitur-archive.library.uu.nl/math/2006-1212-200635/schoone_80_triangulating_a.pdf
+		 * der hier klingt besser
+		 * 3. fix.
+		 */
+		
+		if (this.node.value==null) //do not allow do remove boundary 
+			return this;
+		
+		/////////// 1
+		Edge<T> s = this; //Laufreferenz
+
+		//Knotenkoordinaten (im Kernel des Sternlochs)
+		final double x = s.node.x, y = s.node.y;
+
+		//Entlang der Sternkanten..
+		do {
+			//Kante und Umkehrkante entfernen und 
+			//die übriggebliebenen Sternlochrandkanten 
+			//miteinander verbinden
+			final Edge<T> sin = s.twin.next; 
+			final Edge<T> sp = s.prev;
+
+			sin.prev = sp;
+			sp.next = sin;
+			
+			s.node.value = null; //also remove ref to value 
+			
+			s = s.twin.prev; 
+			s.prev.node.star = s.prev;
+		} while ( s!=this );
+		
+		/////////// 2
+		//das Loch ist nun "sauber" ausgeschnitten.
+		//der Graph ist keine Triangulierung mehr, aber 
+		//eine gültige DCEL
+		
+		//e zeigt auf eine Innenkante des Sternlochs 
+		Edge<T> e = s.prev.next, start = e, l = null;
+		
+		//solange das Sternloch kein Dreieck ist
+		//also der nachfolger vom nachfolger des Nachfolgers von e nicht e ist
+		while (e.next.next.next!= e) { 
+			//die aufeinanderfolgneden Ecken a,b,c wählen
+			Vertex<T> a = e.prev.node, b = e.node, c = e.next.node;
+			
+			//ist b rechts von der Strecke ab und das Sternzentrum (x,y) links davon 
+			if(	rightOf(b.x, b.y, a.x, a.y, c.x, c.y) 
+				&& 
+				leftOf(x, y, a.x, a.y, c.x, c.y) )			
+			{
+				//ist abc ein Polygonohr und kann abgeschnitten werden 
+				Edge<T> ca = new Edge<T>(), ac = new Edge<T>();
+				
+				
+				//neue Kanten ca und ac in Hinzufügereihenfolge l verketten
+				ca.last = l;
+				ac.last = ca;
+				l = ac; 
+				
+				ca.node = a; //?????
+				ca.next = e;
+				ca.prev = e.next; //?
+				
+				//?????				
+				ac.node = c;
+				ac.prev = e.prev; //???
+				ac.next = e.next.next;
+				
+				(ca.twin = ac).twin = ca;
+				
+				e.next.next.prev = ac; //??? :)
+				e.prev.next = ac;
+				
+				e.prev = ca;
+				e.next.next = ca;
+				
+				ca.node.star = ca;
+				ca.next.node.star = ca.next;
+				ca.prev.node.star = ca.prev;
+				
+				e = ac.next;
+			} else //ansonsten 
+				e = e.next; //nächste Kante probieren
 		}
+		
+		//Delaunay-Eigenschaft aller hinzugefügten Diagonalen reparieren 
+		for (Edge<T> el = l, ell; el!=null; el = ell ) {
+			el.fix();
+			ell = el.last;
+			el.last = null; //Hinzufügereihenfolge löschen
+		}
+		
+		
+		// mark this edge "detached"
+		this.next = start;
+		this.prev = start;
+		this.node.value = null;
+		this.twin = this;
+		
+		
+		return start; //start randkante zurückgeben
+		/**/
+	}
+	
+	
+	private Edge<T> setValue(T value) {
+		this.node.value = value;
+		return this;
+	}
+	
+
+	Edge<T> face( Consumer<Edge<T>> visitor ){
+		visitor.accept(this);
+		for (Edge<T> it=this.next;it!=this;it=it.next)
+			visitor.accept(it);
+		
+		return this;
+	}
+	
+
+	/**
+	 * fügt einen Wert in den Triangulierungsgraphen an der 
+	 * Schlüsselposition x,y ein. Rückgabe ist eine neuerzeugte
+	 * Kante die auf den Knoten der den Wert beinhaltet zeigt 
+	 */
+	Edge<T> put(double x, double y, T v) {
+		if (this.twin == this) // if this is detached, follow the chain of detacheds
+			this.next = put(x,y,v);
+		
+		if (!this.contains(x,y)) //koordinaten nicht im lokalen Dreieck
+			return locate(x,y).put(x,y,v); //add auf dem richtigen Dreieck aufrufen
+
+		Edge<T> it = this;
+		
+		for (int i=0;i<=3;i++,it=it.next)
+			if (it.node.x == x && it.node.y == y)
+				return it.setValue(v);
+		
+		//Wert einfügen und erzeugten Knoten merken 
+		Vertex<T> ev = insert(x,y,v).node; 
+		Edge<T> e = ev.star; //alle in Frage kommenden Halbkanten
+		
+		Edge<T> ep = e.prev; //zuerst merken 
+		Edge<T> epi = e.prev.twin; //und dann
+		
+		Edge<T> ein = e.twin.next; //nacheinander fixen
+		Edge<T> eini = e.twin.next.twin;
+		
+		Edge<T> enip = e.next.twin.prev;
+		Edge<T> enipi = e.next.twin.prev.twin;
+		
+		
+		ep.fix(); //fix
+		if (epi!=null) epi.fix();
+		ein.fix();
+		if (eini!=null) eini.fix();
+		enip.fix();
+		if (enipi!=null) enipi.fix();
+		
+		//im Anschluss eine Sternkante auf den Knoten zurückgeben
+		//(kann sich durch flips verändert haben)
+		return ev.star;
+	}
+	
+	/**
+	 * Fügt direkt einen neuen Knoten in das zur Kante gehörende
+	 * Dreieck ein, ungeachtet der Einfügekoordinaten
+	 */
+	private Edge<T> insert(double x, double y, T value) {
+		Vertex<T> v = new Vertex<T>(x,y,value);
+		
+		final Edge<T> abn = new Edge<T>(); abn.node = v;
+		final Edge<T> abnn = new Edge<T>(); abnn.node = next.next.node; 
+		
+		final Edge<T> bcn = new Edge<T>(); bcn.node = v; 
+		final Edge<T> bcnn = new Edge<T>(); bcnn.node = this.node; 
+		
+		final Edge<T> can = new Edge<T>(); can.node = v; 
+		final Edge<T> cann = new Edge<T>(); cann.node = next.node;
+		
+		(abn.twin=bcnn).twin = abn;
+		(bcn.twin=cann).twin = bcn;
+		(can.twin=abnn).twin = can;
+		
+		((next.next.next = can).next=cann).next=next.next;
+		((next.next=bcn).next=bcnn).next = next;
+		((next=abn).next=abnn).next = this;
+		
+		abn.prev = abn.next.next;
+		abn.next.prev = abn;
+		abn.next.next.prev = abn.next;
+		
+		bcn.prev = bcn.next.next;
+		bcn.next.prev = bcn;
+		bcn.next.next.prev = bcn.next;
+		
+		can.prev = can.next.next;
+		can.next.prev = can;
+		can.next.next.prev = can.next;
+		abn.node.star=abn;
+		
+		return abn;
 	}
 
+//	/**
+//	 * @return true , sofern die Position des Knotens das zur Kante 
+//	 * gehörende Dreieck schneidet 
+//	 */
+//	public boolean contains(final Vertex<?> q) { return contains(q.getX(),q.getY()); }
+//	
+
+	/**
+	 * @return true , sofern der Punkt (x,y) das zur Kante gehörende 
+	 * Dreieck schneidet 
+	 */
+	public boolean contains(final double px, final double py) {
+		final Vertex<T> a = node, b = next.node, c = prev.node;
+		return triangleIntersects(px, py, a.x, a.y, b.x, b.y, c.x, c.y);
+	}
+	
+//	/**
+//	 * @return die Kante, die auf den Knoten zeigt, der den gegebenen 
+//	 * Knoten am nächsten liegt.  
+//	 */
+//	public Edge<T> locate(final Vertex<?> q) { return locate(q.getX(), q.getY()); };
+	
+
+	/**
+	 * @return die Kante, die auf den Knoten zeigt, der den gegebenen 
+	 * Koordinaten am nächsten liegt.  
+	 */
+	public Edge<T> locate(final double qx, final double qy) {
+		if (this.twin == this) //XXX allow detached functions to work
+			return next.locate(qx, qy);
+		
+		if (this.contains(qx,qy)) { //wenn das Dreieck die qx,qy enthält
+			//alle (drei) in frage kommenden Knoten überprüfen
+			Edge<T> closest = this; 
+			double dx = closest.node.x-qx, dy = closest.node.y-qy;
+			double distanceSq = dx*dx+dy*dy;
+			
+			for (Edge<T> e = this.next;e!=this;e=e.next) {
+				dx = e.node.x-qx; dy = e.node.y-qy;
+				double dSq = dx*dx+dy*dy;
+				if (dSq>distanceSq) continue;
+				
+				closest = e;
+				distanceSq = dSq;
+			}
+			
+			return closest; //den nächsten zurückgeben
+		}
+		
+		//andernfalls weiter in Richtung Zielkoordinate wandern
+		final Vertex<T> a = this.node, b = next.node, c = prev.node;
+		final double mx = (a.x+b.x+c.x)/3.0, my = (a.y+b.y+c.y)/3.0;
+		
+		//schließlich schneidet der Weg vom Dreiecksmittelpunkt
+		//zum Ziel garantiert eine Kante, die uns dem Ziel näher bringt  
+		if (linesIntersect(	mx, my, qx, qy, a.x,a.y, b.x,b.y) )
+			return next.twin.locate(qx,qy);
+		//else
+		if (linesIntersect(	mx, my, qx, qy, b.x, b.y, c.x, c.y) )
+			return prev.twin.locate(qx,qy);
+		//else
+		if (linesIntersect(	mx, my, qx, qy, c.x, c.y, a.x, a.y) )
+			return this.twin.locate(qx,qy);
+		
+		return null; // keine geschnitten? -> null
+	}
+	
+
+
+	
+	/**
+	 * @return true, wenn der Umkreis des der Kante zugehörigen Dreicks 
+	 * die gegebenen Koordinaten enthält
+	 */
+	boolean circumcircleContains(double qx, double qy) {
+		return insideCircumcircle(
+				qx,qy, 
+				this.node.x, this.node.y,
+				next.node.x, next.node.y, 
+				prev.node.x, prev.node.y);
+	}
+	
+
+	/**
+	 * Stellt rekursiv die Delaunayeigenschaft wieder her
+	 */
+	private void fix() {
+		//existiert eine Umkehrkante und liegt der umkehrkante gegenüberliegende 
+		//Knoten im Inkreis des eigenen Dreicks 
+		if (twin!=null && circumcircleContains( twin.next.node.x, twin.next.node.y )) {
+			flip(); //Kante flippen
+
+			Edge<T> edgeNext = this.next;
+			Edge<T> edgePrev = this.prev;
+
+			Edge<T> twin = this.twin;
+			Edge<T> twinNext = null;
+			Edge<T> twinPrev = null;
+			
+			if (twin!=null) {
+				twinNext = this.twin.next;
+				twinPrev  = this.twin.prev;
+			}
+			
+			edgeNext.fix(); //fix auf nachfolgerkante
+			edgePrev.fix(); //vorgängerkante
+			
+			if (twin!=null) { //und sofern Umkehrkante
+				twin.fix(); //auf umkehrkante 
+				twinNext.fix(); //nachfolger der Umkehrkante
+				twinPrev .fix(); //vorgänger der Umkehrkante anwenden
+			}
+		}
+	}
+	
+	/**
+	 * Kippt eine Kante.
+	 */
+	private Edge<T> flip() {
+		final Edge<T> edge = this;
+		final Edge<T> twin = this.twin;
+		final Edge<T> edgeNext = this.next;
+		final Edge<T> edgePrev = this.prev;
+		final Edge<T> twinNext = this.twin.next;
+		final Edge<T> twinPrev = this.twin.prev;
+		
+		edge.node = edgeNext.node;
+		edge.next = edgePrev;
+		edge.prev = twinNext;
+		
+		twin.node = twinNext.node;
+		twin.next = twinPrev;
+		twin.prev = edgeNext;
+		
+		edgePrev .next = twinNext;
+		edgePrev .prev = edge;
+		
+		twinNext .prev = edgePrev;
+		twinNext .next = edge;
+		
+		twinPrev .next = edgeNext;
+		twinPrev .prev = twin;
+		
+		edgeNext.next = twin ;
+		edgeNext.prev = twinPrev;
+
+		//fast vergessen
+		//die Stern-Garantie wieder herstellen.
+		this.node.star = this;
+		this.next.node.star = this.next;
+		this.prev.node.star = this.prev;
+		
+		this.twin.node.star = this.twin;
+		this.twin.next.node.star = this.twin.next;
+		this.twin.prev.node.star = this.twin.prev;			
+		
+		return this;
+	}
 	
 	
+	///////////////////////
 
 	public static boolean pointAbovePlane(
 			double px, double py, double pz, 
@@ -721,17 +531,18 @@ public class DelaunayTriangulation {
 		}
 		//normalisieren
 		
-		//q von stÃ¼tzvektor p subtrahieren
+		//q von stützvektor p subtrahieren
 		double qpx = px-qx, qpy = py-qy, qpz = pz-qz;
 		
 		//mit der normalen skalarmultiplizieren
 		double d = nx*qpx+ny*qpy+nz*qpz;
 		
-		//drÃ¼ber, wenn Abstand positiv
+		//drüber, wenn Abstand positiv
 		return d>EPSILON;
 	}
 	
-	static final double EPSILON = 0.00001;
+	static final double EPSILON = 0.00000001;
+//	static final double EPSILON = 0.000000000000001;
 
 	public static int relativeCCW(double x1, double y1, double x2, double y2, double px, double py) {
 		x2 -= x1;
@@ -827,6 +638,123 @@ public class DelaunayTriangulation {
     static public boolean rightOf( final double px, final double py, final double ax, final double ay, final double bx, final double by ) {
     	return orientation(px,py,ax,ay,bx,by)>0;
     }
+
+}
+
+
+
+/**
+ * Interner Containerknoten. Speichert Koordinaten-Schlüssel und 
+ * Wert als direktreferenzen. Implementiert das Knoteninterface Vertex
+ * welches alle Zugriffsfunktionen spezifiziert.
+ */
+class Vertex<T> extends Location implements Serializable {
+	private static final long serialVersionUID = 1L;
+
+	T value;
+	Edge<T> star;
+	
+	public T getValue() { return value; }
+	public T setValue(T v) {
+		T old = value;
+		value = v;
+		return old;
+	}
+	
+	public Vertex(double x, double y, T v) {
+		super(x,y);
+		
+		this.value = v; 
+	}
+	
+	public Edge<T> remove() { return star.remove(); }
+	
+	public boolean rightOf(Vertex<T> that, Vertex<T> other) {
+		return orientation(this.x,this.y, that.x,that.y, other.x, other.y)>0;
+	}
+	
+	public boolean leftOf(Vertex<T> that, Vertex<T> other) {
+		return orientation(this.x,this.y, that.x,that.y, other.x, other.y)>0;
+	}
+	
+	
+	
+    static public double orientation( final double px, final double py, final double ax, final double ay, final double bx, final double by ) {
+    	double cax = ax-px, cay = ay-py;
+    	double cbx = bx-px, cby = by-py;
+    	
+    	return (cax*cby-cay*cbx);
+    }
+    
+//    static public boolean leftOf( final Point2D p, final Point2D a, final Point2D b) { return leftOf(p.getX(),p.getY(),a.getX(),a.getY(),b.getX(),b.getY()); }
+    
+    static public boolean leftOf( final double px, final double py, final double ax, final double ay, final double bx, final double by ) {
+    	return orientation(px,py,ax,ay,bx,by)<0;
+    }
+
+    static public boolean rightOf( final double px, final double py, final double ax, final double ay, final double bx, final double by ) {
+    	return orientation(px,py,ax,ay,bx,by)>0;
+    }
+
+}
+
+/**
+ * keine Ahnung wieso ich einen extra BoundingVertex-Typ nutze.
+ */
+class BoundingVertex<T> extends Vertex<T> {
+	private static final long serialVersionUID = 1L;
+	public BoundingVertex(double x, double y) { super(x,y,null); };
+}
+
+
+
+
+public class DelaunayTriangulation {
+	
+	/*
+	public static interface TriangleVisitor<T> {
+		public void meet(Vertex<T> a, Vertex<T> b, Vertex<T> c);
+	}
+	
+	static public<T> int triangles(TriangleVisitor<T> tm, Deque<Edge<T>> todo, Set<Edge<T>> done ) {
+		int triangleCounter = 0;
+		
+		while (!todo.isEmpty()) {
+			Edge<T> e = todo.pop();
+			<
+			Vertex<T> v1 = (e = e.getNext()).getVertex();
+			Vertex<T> v2 = (e = e.getNext()).getVertex();
+			Vertex<T> v3 = (e = e.getNext()).getVertex();
+
+			T p1 = v1.getValue(), p2 = v2.getValue(), p3 = v3.getValue();
+			if (p1!=null && p2!=null && p3!=null) 
+			{ 
+				tm.meet( v1, v2, v3 );
+				triangleCounter++;
+			}
+						
+			done.add(e=e.getNext());
+			done.add(e=e.getNext());
+			done.add(e=e.getNext());
+	
+			for (int i=0;i<3;i++)
+				if (!done.contains((e=e.getNext()).getInverse())) { 
+		 			if (e.getInverse()!=null) { 
+						todo.push(e.getInverse());
+						done.add(e.getInverse());
+						done.add(e.getInverse().getNext());
+						done.add(e.getInverse().getPrevious());
+					}
+				}			
+		}
+		
+		return triangleCounter;
+	}
+	*/
+	
+	
+	
+	
 
 //    static public boolean rightOf( final Point2D p, final Point2D a, final Point2D b) { return rightOf(p.getX(),p.getY(),a.getX(),a.getY(),b.getX(),b.getY()); }
 

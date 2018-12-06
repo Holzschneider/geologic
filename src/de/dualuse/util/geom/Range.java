@@ -2,7 +2,7 @@ package de.dualuse.util.geom;
 
 class Range {
 	static 
-	public final Range EMPTY = Range.of(+1/0d, +1/0d);
+	public final Range EMPTY = Range.of(+1/0d, -1/0d);
 	
 	public final double min, max;
 	

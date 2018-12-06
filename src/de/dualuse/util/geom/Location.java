@@ -1,5 +1,7 @@
 package de.dualuse.util.geom;
 
+import java.util.HashSet;
+
 public class Location {
 	public final double x, y;
 	
@@ -33,5 +35,5 @@ public class Location {
 	public String toString() {
 		return "Location( "+x+", "+y+" )";
 	}
-	
+
 }

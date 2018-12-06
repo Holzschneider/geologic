@@ -1,29 +1,24 @@
 package de.dualuse.util.geom;
 
-class BoundingBox implements Region {
+class Bounds implements Region {
 	public final Range x, y;
 	
 	static
-	public BoundingBox of(Range x, Range y) {
-		return new BoundingBox(x,y);
+	public Bounds of(Range x, Range y) {
+		return new Bounds(x,y);
 	}
 
-//	public Bounds(double x, double y) {
-//		this.x = Range.of(x, x);
-//		this.y = Range.of(y, y);
-//	}
-	
-	public BoundingBox(Range x, Range y) {
+	public Bounds(Range x, Range y) {
 		this.x = x;
 		this.y = y;
 	}
 	
-	public BoundingBox extend(double x, double y) {
-		return BoundingBox.of( this.x.extend(x), this.y.extend(y) );
+	public Bounds extend(double x, double y) {
+		return Bounds.of( this.x.extend(x), this.y.extend(y) );
 	}
 	
-	public BoundingBox intersect(BoundingBox that) {
-		return BoundingBox.of( this.x.intersect(that.x), this.y.intersect(that.y) );
+	public Bounds intersect(Bounds that) {
+		return Bounds.of( this.x.intersect(that.x), this.y.intersect(that.y) );
 	}
 	
 	public boolean isEmpty() {
