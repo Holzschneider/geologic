@@ -8,6 +8,8 @@ import java.util.function.Consumer;
 
 
 
+//quadtree, delauney, gridhash(2d)
+
 public interface CartesianMap<T> extends Map<Location, T> {
 	
 	default public T put(double x, double y, T value) {
@@ -40,9 +42,6 @@ public interface CartesianMap<T> extends Map<Location, T> {
 
 
 
-
-
-//quadtree, delauney, gridhash(2d)  (boxhash (3d), (octree))
 
 
 

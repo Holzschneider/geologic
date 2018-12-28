@@ -1,7 +1,6 @@
 package de.dualuse.util.geom;
 
-import java.util.HashSet;
-
+/* probably change to Coordinates */
 public class Location {
 	public final double x, y;
 	
