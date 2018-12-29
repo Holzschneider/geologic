@@ -1,14 +1,24 @@
 package de.dualuse.util.geom;
 
+import java.util.Collection;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+
 public class Edge<T> /*implements LocalMap<T>*/ {
 	
 	@Override
 	public String toString() {
-		return "Edge("+id+")";
+		if (node!=null && prev!=null && prev.node!=null)
+			return "Edge"+id+"("+prev.node.value.toString()+node.value.toString()+")";
+		else
+			return "Edge"+id;
 	}
 	
 	static int edgeCounter = 0;
 	
+	String label = "";
 	int id = edgeCounter++;
 	
 	Edge<T> next;
@@ -18,6 +28,9 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	Vertex<T> node = null;
 	
 	//////////////////////////////
+	
+	public Edge() { }
+	public Edge(String label) { this.label = label; };
 	
 	
 	protected Edge<T> createEdge() {
@@ -29,25 +42,87 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	}
 	
 	////////
+
+	protected void walk(Function<Edge<T>,Edge<T>> step, Consumer<Edge<T>> visitor) {
+		Edge<T> cursor = this;
+		do {
+			visitor.accept(cursor);
+			cursor = step.apply(cursor);
+		} while (cursor!=this);
+	}
 	
-	public Edge<T> put(double x, double y, T value) {
-//		if (!this.contains(x, y))
-//			return this.locate(x, y).put(x, y, value);
+	protected Edge<T> find(Function<Edge<T>,Edge<T>> step, Predicate<Edge<T>> condition) {
+		Edge<T> cursor = this;
+		do {
+			if (condition.test(cursor))
+				return cursor;
+			cursor = step.apply(cursor);
+		} while (cursor!=this);
+		return null;
+	}
+	
+	protected<AccumulatorType> AccumulatorType fold(Function<Edge<T>,Edge<T>> step, AccumulatorType accumulator, BiFunction<AccumulatorType,Edge<T>,AccumulatorType> reducer) {
+		Edge<T> cursor = this;
+		do {
+			accumulator = reducer.apply(accumulator, cursor);
+			cursor = step.apply(cursor);
+		} while (cursor!=this);
+		return accumulator;
+	}
+
+
+	
+	public <CollectionType extends Collection<? super Vertex<T>>> CollectionType collectVertices(CollectionType collector) {
+		if (collector.contains(this.node))
+			return collector;
 		
+		collector.add(this.node);
+		walk( edge->edge.twin.prev, edge -> edge.twin.collectVertices(collector) ); //= this.star
 		
-		return this;
+		return collector;
 	}
 	
 	
 	
+	public boolean contains(final double px, final double py) {
+		final Vertex<T> a = node, b = next.node, c = prev.node;
+		if (a==b || b==c || a==c) // uni or bipolar mesh
+			return true;
+		else
+		if (next.next.next == this)
+			return triangleIntersects(px, py, a.x, a.y, b.x, b.y, c.x, c.y);
+		else 
+			throw new IllegalArgumentException("not a triangle");
+	}
 	
-//	public boolean contains(final double px, final double py) {
-//		final Vertex<T> a = node, b = next.node, c = prev.node;
-//		if (a==b || b==c || a==c) // uni or bipolar mesh
-//			return true;
-//		else
-//			return triangleIntersects(px, py, a.x, a.y, b.x, b.y, c.x, c.y);
-//	}
+	
+	Edge<T> attach(Vertex<T> vertex) {
+		Edge<T> that = this; 
+		
+		Edge<T> in = that.createEdge();
+		Edge<T> out = that.createEdge();
+		
+		in.node = vertex;
+		in.twin = in.next = out;
+		out.prev = out.twin = in;
+		
+		out.next = that.next;
+		in.prev = that;
+		in.next = out;
+		
+		that.next.prev = out;
+		that.next = in;
+		
+		out.node = that.node;
+		
+		in.next  = in .find(e->e.prev, e->e.prev.node==vertex);
+		out.prev = out.find(e->e.next, e->e.node==vertex);
+		
+		in.next.prev = in;
+		out.prev.next = out;
+		
+		return this;
+	}
 	
 	
 //	public Edge<T> insert(double x, double y, T value) {

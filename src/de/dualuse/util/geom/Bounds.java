@@ -1,6 +1,10 @@
 package de.dualuse.util.geom;
 
 class Bounds implements Region {
+	static 
+	public final Bounds EMPTY = Bounds.of(Range.EMPTY,Range.EMPTY);
+	
+	
 	public final Range x, y;
 	
 	static
@@ -15,6 +19,10 @@ class Bounds implements Region {
 	
 	public Bounds extend(double x, double y) {
 		return Bounds.of( this.x.extend(x), this.y.extend(y) );
+	}
+	
+	public Bounds grow(double margin) {
+		return Bounds.of( this.x.extend(x.min-margin).extend(x.max+margin), this.y.extend(y.min-margin).extend(y.max+margin) );
 	}
 	
 	public Bounds intersect(Bounds that) {
@@ -35,4 +43,9 @@ class Bounds implements Region {
 	
 	@Override
 	native public boolean intersects(double ax, double ay, double bx, double by, double cx, double cy);
+	
+	@Override
+	public String toString() {
+		return x+"️×"+y;
+	}
 }

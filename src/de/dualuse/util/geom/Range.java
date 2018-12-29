@@ -24,6 +24,11 @@ class Range {
 		return Range.of( max(this.min,that.min), min(this.max,that.max) );
 	}
 	
+	public double spread() {
+		return max-min;
+	}
+	
+	
 	private static double min(double a, double b) {
 		return a<b?a:b;
 	}
@@ -33,4 +38,10 @@ class Range {
 	}
 	
 	public boolean isEmpty() { return this.min>this.max; }
+	
+	
+	@Override
+	public String toString() {
+		return "["+min+","+max+"]";
+	}
 }

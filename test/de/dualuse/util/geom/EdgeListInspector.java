@@ -4,6 +4,7 @@ import static java.lang.Math.PI;
 import static java.lang.Math.asin;
 import static java.lang.Math.cos;
 import static java.lang.Math.hypot;
+import static java.lang.Math.max;
 import static java.lang.Math.pow;
 import static java.lang.Math.sqrt;
 
@@ -22,68 +23,15 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.ArrayDeque;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.function.Consumer;
 
 import javax.swing.JComponent;
 import javax.swing.JFrame;
-import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 import de.dualuse.util.Geometry;
 
-
-//addMouseMotionListener();
-
-//Adapter.on(MouseMotionListener.class)
-//Proxy.newProxyInstance(this.getClass().getClassLoader(), interfaces, h)
-
-class Adapter {
-	
-	interface Connector<T> {
-		<Q> Connector<T> on(String event, Consumer<Q> c);
-		T build();
-	}
-	
-	public static<T> Connector<T> wrap(Class<T> listenerClass) {
-		
-		HashMap<Method,Consumer<Object>> map = new HashMap<>();
-		
-		@SuppressWarnings("unchecked")
-		T t = (T)Proxy.newProxyInstance(Adapter.class.getClassLoader(), new Class<?>[] { listenerClass }, new InvocationHandler() {
-			@Override
-			public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-				
-				map.get(method).accept(args[0]);
-				return null;
-			}
-		});
-		
-		return new Connector<T>() {
-//			@Override
-//			public<R> Connector<T> connect(Method m, Consumer<Object> c) {
-//				map.put(m, c);
-//				return this;
-//			}
-			
-			public T build() {
-				return t;
-			}
-
-			@Override
-			public <Q> Connector<T> on(String event, Consumer<Q> c) {
-				// TODO Auto-generated method stub
-				return null;
-			}
-		};
-	}
-	
-}
 
 
 public class EdgeListInspector extends JComponent {
@@ -123,7 +71,7 @@ public class EdgeListInspector extends JComponent {
 		}
 	};
 	
-	
+
 	
 	public Edge<?> mesh;
 	
@@ -142,21 +90,33 @@ public class EdgeListInspector extends JComponent {
 	
 	double R = 20, D = 4;
 	
+	private static Color colorForEdge(Edge<?> edge, float alpha) {
+		return new Color((Color.HSBtoRGB( edge.id*1337.1337f , .85f, 0.5f) & 0xFFFFFF)|((((int)(alpha*255))&0xFF)<<24),true);
+	}
+	
 	@Override
 	protected void paintComponent(Graphics g) {
 		Graphics2D g2 = Graphics2D.class.cast(g.create());
 		
+		
 		g2.transform(canvasTransform);
+		g2.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
 		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
 		
 		float S = 1/(float)canvasTransform.getScaleX();
 		double A = 8, H = A/3, O = A*2;
-		R = 30; D = 6;
-		S = 1;
+		R = 50; D = 6;
+//		S = 1;
+//		S *= 1.337;
 
-		BasicStroke solid = new BasicStroke(S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL);
-		BasicStroke dotted = new BasicStroke(S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1, new float[] { S }, 0);
+		BasicStroke solid = new BasicStroke(2*S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL);
+//		BasicStroke dotted = new BasicStroke(2*S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1, new float[] { 1*S,3*S }, 0);
+//		BasicStroke shifted = new BasicStroke(2*S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1, new float[] { 1*S,3*S }, 2*S );
+		BasicStroke dotted = new BasicStroke(2*S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1, new float[] { 3*S }, 0);
+		BasicStroke shifted = new BasicStroke(2*S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1, new float[] { 3*S }, 3*S );
+		
+		g2.setFont(g2.getFont().deriveFont( g2.getFont().getSize2D()*S ));
 		
 		
 		g2.setStroke(solid);
@@ -170,8 +130,7 @@ public class EdgeListInspector extends JComponent {
 			HashSet<Edge<?>> edges = new HashSet<Edge<?>>();
 			HashSet<Vertex<?>> vertices = new HashSet<Vertex<?>>();
 			ArrayDeque<Edge<?>> todo = new ArrayDeque<>();
-			todo.add(mesh);
-			edges.add(mesh);
+			todo.add(mesh); edges.add(mesh);
 			
 			while (!todo.isEmpty()) {
 				Edge<?> edge = todo.removeFirst();
@@ -191,6 +150,17 @@ public class EdgeListInspector extends JComponent {
 					line.moveTo( tail.x, tail.y );
 					line.lineTo( head.x, head.y );
 					line.lineTo( head.x+ax, head.y+ay );
+
+					g2.setColor(colorForEdge(edge,1));
+					
+					String edgeLabel = edge.prev.node.value.toString()+edge.node.value.toString();
+					Rectangle2D lb = g2.getFontMetrics().getStringBounds(edgeLabel, g2);
+					double rt = max(lb.getMaxX(),lb.getMaxY());
+					double px = (float)((tail.x+head.x)/2-nx*rt);
+					double py = (float)((tail.y+head.y)/2-ny*rt);
+					
+					
+					g2.drawString(edgeLabel, (float)(px-lb.getCenterX()), (float)(py-lb.getCenterY()));
 									
 					g2.draw(line);
 					
@@ -199,27 +169,33 @@ public class EdgeListInspector extends JComponent {
 					
 					if (drawable(edge.twin)) {
 						line(S, edge.twin, tail, head);
-
 						
 						line.reset();
 						line.moveTo( (x1+x0)/2, (y1+y0)/2 );
 						line.quadTo(
-								(x1+x0)/2+dx/dl*O, (y1+y0)/2+dy/dl*O,
-								(head.x+tail.x)/2+dx/dl*O, (head.y+tail.y)/2+dy/dl*O );
+								(x1+x0)/2+S*dx/dl*O, (y1+y0)/2+S*dy/dl*O,
+								(head.x+tail.x)/2+S*dx/dl*O, (head.y+tail.y)/2+S*dy/dl*O );
+						
 						g2.draw(line);
-
 					}
 
+					g2.setColor(colorForEdge(edge,0.41f));
+
 					if (drawable(edge.next)) {
-						line.reset();
-						line.moveTo(x1, y1);
-						
 						line(S, edge.next,tail,head);
 
 
 						double mx = tail.y-head.y, my = head.x-tail.x;
 						double t = Geometry.lineIntersection(x1, y1, nx, ny, tail.x, tail.y, mx, my);
-						double cx = x1+nx*t, cy = y1+ny*t, r = hypot(cx-x1, cy-y1);
+						double cx = x1+nx*t, cy = y1+ny*t;;
+						
+						
+						if (edge.next == edge.twin) {
+							cx = (tail.x+x1)/2; 
+							cy = (tail.y+y1)/2;
+						}
+							
+						double r = hypot(cx-x1, cy-y1);
 						
 						Ellipse2D.Double e = new Ellipse2D.Double();
 						e.setFrameFromCenter(cx, cy, cx+r, cy+r);
@@ -228,8 +204,43 @@ public class EdgeListInspector extends JComponent {
 						double b = Geometry.direction(tail.x-cx, tail.y-cy);
 						double d = Geometry.angle(a, b);
 						
-						g2.draw(new Arc2D.Double(cx-r,cy-r, r*2, r*2, -a*180/PI, -d*180/PI, Arc2D.OPEN));
+						if (edge.next == edge.twin)
+							g2.draw(new Arc2D.Double(cx-r,cy-r, r*2, r*2, -a*180/PI, d*180/PI, Arc2D.OPEN));
+						else
+							g2.draw(new Arc2D.Double(cx-r,cy-r, r*2, r*2, -a*180/PI, -d*180/PI, Arc2D.OPEN));
 					}
+					
+					if (drawable(edge.prev)) {
+						g2.setStroke(shifted);
+
+						line(S, edge.prev,head,tail);
+
+						double mx = tail.y-head.y, my = head.x-tail.x;
+						double t = Geometry.lineIntersection(x0, y0, nx, ny, tail.x, tail.y, mx, my);
+						double cx = x0+nx*t, cy = y0+ny*t;;
+						
+						
+						if (edge.prev == edge.twin) {
+							cx = (tail.x+x0)/2; 
+							cy = (tail.y+y0)/2;
+						}
+							
+						double r = hypot(cx-x0, cy-y0);
+						
+						Ellipse2D.Double e = new Ellipse2D.Double();
+						e.setFrameFromCenter(cx, cy, cx+r, cy+r);
+						
+						double a = Geometry.direction(x0-cx, y0-cy);
+						double b = Geometry.direction(tail.x-cx, tail.y-cy);
+						double d = Geometry.angle(a, b);
+						
+						if (edge.prev== edge.twin)
+							g2.draw(new Arc2D.Double(cx-r,cy-r, r*2, r*2, -(-a*180/PI-d*180/PI), -d*180/PI, Arc2D.OPEN));
+						else
+							g2.draw(new Arc2D.Double(cx-r,cy-r, r*2, r*2, -a*180/PI-d*180/PI, d*180/PI, Arc2D.OPEN));
+					}
+					g2.setColor(colorForEdge(edge,1));
+					
 					g2.setStroke(solid);
 				}
 				
@@ -277,24 +288,52 @@ public class EdgeListInspector extends JComponent {
 	}
 	
 	
+	
+	static EdgeListInspector showInspector(Edge<?> e, String title) {
+		
+		int SIZE = 800;
+		Bounds b = Bounds.EMPTY;
+		for (Vertex<?> v: e.collectVertices(new HashSet<Vertex<?>>()))
+			b = b.extend(v.x, v.y);
+		
+		b = b.grow(100);
+		
+		double scale = SIZE/max(b.x.spread(),b.y.spread());
+		
+		EdgeListInspector eli = new EdgeListInspector(e);
+		eli.canvasTransform.scale(scale, scale);
+		eli.canvasTransform.translate(-b.x.min, -b.y.min);
+		
+		
+		JFrame f = new JFrame(title);
+		f.setContentPane(eli);
+		f.setBounds(100, 100, SIZE, SIZE);
+		f.setVisible(true);
+		
+		return eli;
+	}
+	
+	
 	public static void main(String[] args) {
 
 		Vertex<String> a = new Vertex<String>(100, 100, "A");
 		Vertex<String> b = new Vertex<String>(500, 200, "B");
 		Vertex<String> c = new Vertex<String>(200, 400, "C");
 		
-		Edge<String> ab = new Edge<String>();
-		Edge<String> bc = new Edge<String>();
-		Edge<String> ca = new Edge<String>();
+		Edge<String> ab = new Edge<String>("ab");
+		Edge<String> bc = new Edge<String>("bc");
+		Edge<String> ca = new Edge<String>("ca");
 		
-		(((ca.next = ab).prev = ca).node = a).star = ca;
-		(((ab.next = bc).prev = ab).node = b).star = ab;
-		(((bc.next = ca).prev = bc).node = c).star = bc;
+//		(((ca.next = ab).prev = ca).node = a).star = ca;
+//		(((ab.next = bc).prev = ab).node = b).star = ab;
+//		(((bc.next = ca).prev = bc).node = c).star = bc;
+		((ca.next = ab).prev = ca).node = a;
+		((ab.next = bc).prev = ab).node = b;
+		((bc.next = ca).prev = bc).node = c;
 		
-		Edge<String> ba = new Edge<String>();
-		Edge<String> cb = new Edge<String>();
-		Edge<String> ac = new Edge<String>();
-
+		Edge<String> ba = new Edge<String>("BA");
+		Edge<String> cb = new Edge<String>("CB");
+		Edge<String> ac = new Edge<String>("AC");
 		
 		(ba.twin = ab).twin = ba;
 		(cb.twin = bc).twin = cb;
@@ -312,13 +351,9 @@ public class EdgeListInspector extends JComponent {
 		cb.node = b;
 		ba.node = a;
 		
+		
 		//////////////
-		JFrame f = new JFrame();
-		
-		f.setContentPane(new EdgeListInspector(ba));
-		
-		f.setBounds(100, 100, 800, 800);
-		f.setVisible(true);
-		
+
+		showInspector(ba,EdgeListInspector.class.getSimpleName());
 	}
 }

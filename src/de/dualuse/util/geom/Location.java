@@ -1,5 +1,7 @@
 package de.dualuse.util.geom;
 
+import static java.lang.Math.sqrt;
+
 /* probably change to Coordinates */
 public class Location {
 	public final double x, y;
@@ -33,6 +35,14 @@ public class Location {
 	@Override
 	public String toString() {
 		return "Location( "+x+", "+y+" )";
+	}
+	
+	////////////////
+	
+	
+	public double distance(double x, double y) {
+		double dx = this.x-x, dy = this.y-y;
+		return sqrt(dx*dx+dy*dy);
 	}
 
 }

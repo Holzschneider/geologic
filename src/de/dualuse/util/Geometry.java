@@ -345,5 +345,9 @@ public class Geometry {
       x = x*(1.5f-xhalf*x*x); // Newton step, repeating increases accuracy
       return x;
     }
-    
+
+	
+	public static void main(String[] args) {
+		System.out.println("Huhu");
+	}
 }
