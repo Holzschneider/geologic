@@ -8,3 +8,6 @@
 # IntelliJ
 .idea
 /bin/
+
+# vscode
+/.vscode/
