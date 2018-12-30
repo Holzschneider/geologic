@@ -6,6 +6,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
 public class Edge<T> /*implements LocalMap<T>*/ {
 	
@@ -19,22 +20,22 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	
 	static int edgeCounter = 0;
 	
-	String label = "";
-	int id = edgeCounter++;
+	public String label = "";
+	public int id = edgeCounter++;
 	
 	static Edge<?> current = null;
 	
-	Edge<T> next;
-	Edge<T> prev;
-	Edge<T> twin;
+	public Edge<T> next;
+	public Edge<T> prev;
+	public Edge<T> twin;
 	
-	Vertex<T> node = null;
+	public Vertex<T> node = null;
 	
 	//////////////////////////////
 	
 	public Edge() { }
 	public Edge(String label) { this.label = label; };
-	
+	public Edge(Vertex<T> v) { this.node = v; }
 	
 	protected Edge<T> createEdge() {
 		return new Edge<T>();
@@ -45,53 +46,64 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	}
 	
 	////////
-
-	protected void walk(Function<Edge<T>,Edge<T>> step, Consumer<Edge<T>> visitor) {
+	private UnaryOperator<Edge<T>> starward() { return e->e.twin.prev; };
+	private UnaryOperator<Edge<T>> backward() { return e->e.prev; };
+	private UnaryOperator<Edge<T>> forward() { return e->e.next; };
+	private Predicate<Edge<T>> looped() { return e->e==this; };
+	
+	public Edge<T> find( Predicate<Edge<T>> stop, Function<Edge<T>,Edge<T>> step ) {
+		for( Edge<T> cursor = this;;cursor = step.apply(cursor) )
+			if (stop.test(cursor))
+				return cursor;
+	}
+	
+	public Edge<T> walkLoop( Consumer<Edge<T>> visitor ) { return walk( looped(), forward(), visitor); }
+	public Edge<T> walk(Predicate<Edge<T>> stop, Function<Edge<T>,Edge<T>> step, Consumer<Edge<T>> visitor) {
 		Edge<T> cursor = this;
+		
 		do {
 			visitor.accept(cursor);
 			cursor = step.apply(cursor);
-		} while (cursor!=this);
+		} while ( !stop.test(cursor) ); 
+		
+		return cursor;
 	}
-	
-	protected Edge<T> find(Function<Edge<T>,Edge<T>> step, Predicate<Edge<T>> condition) {
-		Edge<T> cursor = this;
-		do {
-			if (condition.test(cursor))
-				return cursor;
-			cursor = step.apply(cursor);
-		} while (cursor!=this);
-		return null;
-	}
-	
-	
 	
 	@Deprecated
-	protected Edge<T> reduce(Function<Edge<T>,Edge<T>> step, BinaryOperator<Edge<T>> accumulator) {
+	public Edge<T> reduce(Predicate<Edge<T>> stop, UnaryOperator<Edge<T>> step, BinaryOperator<Edge<T>> accumulator) {
 		Edge<T> e = step.apply(this);
-		return e.reduce(step, e, accumulator );
+		return e.reduce(stop, step, e, accumulator );
 	}
 	
-	protected Edge<T> reduce(Function<Edge<T>,Edge<T>> step, Edge<T> identity, BinaryOperator<Edge<T>> accumulator) {
-		return reduce(step, identity, accumulator);		
+	public Edge<T> reduce(Predicate<Edge<T>> stop, UnaryOperator<Edge<T>> step, Edge<T> identity, BinaryOperator<Edge<T>> accumulator) {
+		return reduce(stop, step, identity, accumulator);		
 	}
 	
-	protected<AccumulantType> AccumulantType reduce(Function<Edge<T>,Edge<T>> step, AccumulantType accumulant, BiFunction<AccumulantType,Edge<T>,AccumulantType> accumulator) {
+	
+	public<A> A reduceLoop(A accumulant, BiFunction<A,Edge<T>,A> accumulator) 
+	{ return reduce( looped(), forward(), accumulant, accumulator); }
+	
+	public<A> A reduce(Predicate<Edge<T>> stop, UnaryOperator<Edge<T>> step, A accumulant, BiFunction<A,Edge<T>,A> accumulator) {
 		Edge<T> cursor = this;
 		do {
 			accumulant = accumulator.apply(accumulant, cursor);
 			cursor = step.apply(cursor);
-		} while (cursor!=this);
+		} while (!stop.test(cursor));
 		return accumulant;
 	}
+	
 
+	
+	public <CollectionType extends Collection<? super Vertex<T>>> CollectionType collect(CollectionType collector) {
+		return collectVertices(collector);
+	}
 	
 	public <CollectionType extends Collection<? super Vertex<T>>> CollectionType collectVertices(CollectionType collector) {
 		if (collector.contains(this.node))
 			return collector;
 		
 		collector.add(this.node);
-		walk( edge->edge.twin.prev, edge -> edge.twin.collectVertices(collector) ); //= this.star
+		walk( looped(), starward(), edge -> edge.twin.collectVertices(collector) ); //= this.star
 		
 		return collector;
 	}
@@ -103,6 +115,10 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	protected boolean isBackwardTriangle() { return prev.prev.prev == this ; }
 	protected boolean isTriangle() { return isForwardTriangle() && isBackwardTriangle(); }
 	
+	public double area() {
+		return reduceLoop( 0.0, (acc,edge)->acc+(edge.next.node.x-edge.node.x)*(edge.next.node.y+edge.node.y) )/2;
+	}
+	
 	public boolean contains(final double px, final double py) {
 //		if ( this==next|| this==next.next ) // uni or bipolar mesh
 //			return true;
@@ -111,11 +127,11 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 //			return triangleIntersects(px, py, node.x, node.y, next.node.x, next.node.y, next.next.node.x, next.next.node.y);
 //		else
 //			return false;
-			return reduce(e->e.next, 0, (i,e)->i+(linesIntersect(px, py, px, 1/0d, e.node.x, e.node.y, e.next.node.x, e.next.node.y)?1:0) )%2==1;
+			return reduceLoop(0, (i,e)->i+(linesIntersect(px, py, px, 1/0d, e.node.x, e.node.y, e.next.node.x, e.next.node.y)?1:0) )%2==1;
 	}
 	
 	
-	Edge<T> attach(Vertex<T> vertex) {
+	public Edge<T> attach(Vertex<T> vertex) {
 		Edge<T> that = this; 
 		
 		Edge<T> in = that.createEdge();
@@ -134,8 +150,8 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 		
 		out.node = that.node;
 		
-		in.next  = in .find(e->e.prev, e->e.prev.node==vertex);
-		out.prev = out.find(e->e.next, e->e.node==vertex);
+		in.next  = in .find( e->e.prev.node==vertex, backward() );
+		out.prev = out.find( e->e.node==vertex, forward() );
 		
 		in.next.prev = in;
 		out.prev.next = out;

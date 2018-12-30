@@ -7,14 +7,18 @@ import java.io.Serializable;
  * Wert als direktreferenzen. Implementiert das Knoteninterface Vertex
  * welches alle Zugriffsfunktionen spezifiziert.
  */
-class Vertex<T> extends Location implements Serializable {
+public class Vertex<T> extends Location implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	T value;
+	public T value;
 //	Edge<T> star;
 	
-	public Vertex(double x, double y, T v) {
+	public Vertex(double x, double y) {
 		super(x,y);
+	}
+	
+	public Vertex(double x, double y, T v) {
+		this(x,y);
 		
 		this.value = v; 
 	}
@@ -24,4 +28,7 @@ class Vertex<T> extends Location implements Serializable {
 		return "Vertex( "+value+" @ "+x+", "+y+" )";
 	}
 
+	
+	public T value() { return value; }
+	public Vertex<T> value(T value) { this.value = value; return this; }
 }

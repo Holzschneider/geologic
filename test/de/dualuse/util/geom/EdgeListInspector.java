@@ -38,7 +38,6 @@ import java.util.HashSet;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import javax.swing.JComponent;
 import javax.swing.Timer;
 
@@ -66,7 +65,7 @@ public class EdgeListInspector extends JComponent {
 					Object result = engine().eval(last=(line.isEmpty()?last:line));
 					if (result!=null)
 						System.out.println(" -> "+result);
-				} catch (ScriptException ex) {
+				} catch (Exception ex) {
 					System.err.println(ex);
 				}
 			}
