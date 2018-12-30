@@ -1,5 +1,6 @@
 package de.dualuse.util.geom;
 
+import java.awt.geom.Point2D;
 import java.util.Collection;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
@@ -22,8 +23,6 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	
 	public String label = "";
 	public int id = edgeCounter++;
-	
-	static Edge<?> current = null;
 	
 	public Edge<T> next;
 	public Edge<T> prev;
@@ -50,7 +49,8 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	private UnaryOperator<Edge<T>> backward() { return e->e.prev; };
 	private UnaryOperator<Edge<T>> forward() { return e->e.next; };
 	private Predicate<Edge<T>> looped() { return e->e==this; };
-	
+
+	public Edge<T> findForward(Predicate<Edge<T>> stop) { return find(stop, forward()); }
 	public Edge<T> find( Predicate<Edge<T>> stop, Function<Edge<T>,Edge<T>> step ) {
 		for( Edge<T> cursor = this;;cursor = step.apply(cursor) )
 			if (stop.test(cursor))
@@ -108,16 +108,34 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 		return collector;
 	}
 
-	protected boolean isDetached() { return node == null; }
+	protected boolean isDetached() { return node == null || prev==null || prev.node == null; }
 	protected boolean isUnipolar() { return this==next; }
 	protected boolean isBipolar() { return this!=next && this==next.next; }
 	protected boolean isForwardTriangle() { return next.next.next == this ; }
 	protected boolean isBackwardTriangle() { return prev.prev.prev == this ; }
 	protected boolean isTriangle() { return isForwardTriangle() && isBackwardTriangle(); }
+	protected boolean intersects(double x0, double y0, double x1, double y1) {
+		System.out.println(this+" intersects "+linesIntersect(prev.node.x, prev.node.y, node.x, node.y, x0, y0, x1, y1) );
+		return linesIntersect(prev.node.x, prev.node.y, node.x, node.y, x0, y0, x1, y1);
+	}
 	
+	
+	///https://stackoverflow.com/questions/1165647/how-to-determine-if-a-list-of-polygon-points-are-in-clockwise-order
 	public double area() {
 		return reduceLoop( 0.0, (acc,edge)->acc+(edge.next.node.x-edge.node.x)*(edge.next.node.y+edge.node.y) )/2;
 	}
+	
+	
+	public interface CentroidDefinition<C> { C defineCentroid(double x, double y); }
+	public<C> C centroid(CentroidDefinition<C> c) {
+		return next.centroid(c, this, node.x, node.y, 1);
+	}
+	
+	private<C> C centroid(CentroidDefinition<C> c, Edge<T> end, double sx, double sy, int n) {
+		if (end!=this) return next.centroid(c, end, sx+node.x, sy+node.y, n+1);
+		else return c.defineCentroid(sx/n, sy/n);
+	}
+	
 	
 	public boolean contains(final double px, final double py) {
 //		if ( this==next|| this==next.next ) // uni or bipolar mesh
@@ -127,7 +145,7 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 //			return triangleIntersects(px, py, node.x, node.y, next.node.x, next.node.y, next.next.node.x, next.next.node.y);
 //		else
 //			return false;
-			return reduceLoop(0, (i,e)->i+(linesIntersect(px, py, px, 1/0d, e.node.x, e.node.y, e.next.node.x, e.next.node.y)?1:0) )%2==1;
+		return reduceLoop(0, (i,e)->i+(e.intersects(px, py, px, 1/0d)?1:0) )  %2 == (area()<0?1:0);
 	}
 	
 	
@@ -159,31 +177,29 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 		return this;
 	}
 	
+	public static Edge<?> current = null;
+	static<Q> Edge<Q> highlight(Edge<Q> e) { 
+		current = e; 
+		return e; 
+	};
 	
-	public Edge<T> locate(double px, double py) {
+	//edge.locate(inspector.click.x, inspector.click.y)
+	public Edge<T> locate(double qx, double qy) {
+		highlight(this);
+		if (this.contains(qx,qy)) 
+			return reduceLoop( this, (a,b) -> { highlight(b); return b.node.isCloserTo(qx, qy).than( a.node ) ? b : a;} );
 		
+//		int n = reduceLoop( 0, (i,e) -> i+1 );
+//		double cx = reduceLoop( 0.0, (sx,e) -> sx+e.node.x ) / n;
+//		double cy = reduceLoop( 0.0, (sy,e) -> sy+e.node.y ) / n;
+//		Edge<T> guess = reduceLoop( null, (a,b) -> a==null || b.intersects(cx, cy, qx, qy) && b.node.isCloserTo(qx, qy).than(a.node)?b:a);
 		
-		return this;
+		System.out.println(centroid( Point2D.Double::new ));
+		
+		Edge<T> guess = centroid( (cx,cy) -> reduceLoop( null, (a,b) -> {highlight(b); return b.intersects(cx, cy, qx, qy) && (a==null || b.node.isCloserTo(qx, qy).than(a.node))?b:a;} ) );
+		return highlight(guess.twin.locate(qx, qy));
 	}
 	
-	
-//	public Edge<T> insert(double x, double y, T value) {
-//		Vertex<T> node = createVertex(x,y,value);
-//		Edge<T> first = this, in, out;
-//
-//		in = createEdge();
-//		out = createEdge();
-//		in.twin = out;
-//		out.twin = in;
-//		in.prev = this;
-//		out.next = next;
-//		out.prev = out;
-//		in.next = in;
-//		in.node = node;
-//		out.node = this.node;
-//		
-//		return in;
-//	}
 	
 	
 //	public Edge<T> locate(final double qx, final double qy) {

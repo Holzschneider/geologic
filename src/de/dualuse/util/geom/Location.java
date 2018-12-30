@@ -41,8 +41,25 @@ public class Location {
 	
 	
 	public double distance(double x, double y) {
-		double dx = this.x-x, dy = this.y-y;
-		return sqrt(dx*dx+dy*dy);
+		return sqrt(quadrance(x,y));
 	}
-
+	
+	public double quadrance(double x, double y) {
+		double dx = this.x-x, dy = this.y-y;
+		return dx*dx+dy*dy;	
+	}
+	
+	interface LocationComparable {
+		boolean than(Location that);
+	}
+	
+	public LocationComparable isCloserTo(double x, double y) {
+		return that -> {
+			System.out.println(this+ " isCloserThan "+that);
+			return this.quadrance(x,y)<that.quadrance(x, y);
+		};
+	}
+	
 }
+
+

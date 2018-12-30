@@ -30,14 +30,15 @@ import java.awt.geom.Rectangle2D;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.ref.WeakReference;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.function.Consumer;
 
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import javax.swing.JComponent;
 import javax.swing.Timer;
 
@@ -48,14 +49,16 @@ import de.dualuse.util.Geometry;
 public class EdgeListInspector extends JComponent {
 	private static final long serialVersionUID = 1L;
 	
-	
-	ArrayList<WeakReference<ScriptEngine>> engines = new ArrayList<WeakReference<ScriptEngine>>(); 
-	
 	interface ConsoleBuilder {
 		ScriptEngine engine();
 		
 		default ConsoleBuilder publish(String name, Object value) {
 			engine().getBindings(ScriptContext.ENGINE_SCOPE).put(name, value);
+			return this;
+		}
+		
+		default ConsoleBuilder eval(String statement) throws ScriptException {
+			engine().eval(statement);
 			return this;
 		}
 		
@@ -65,8 +68,8 @@ public class EdgeListInspector extends JComponent {
 					Object result = engine().eval(last=(line.isEmpty()?last:line));
 					if (result!=null)
 						System.out.println(" -> "+result);
-				} catch (Exception ex) {
-					System.err.println(ex);
+				} catch (Throwable thr) {
+					System.err.println(thr);
 				}
 			}
 		}
@@ -74,17 +77,8 @@ public class EdgeListInspector extends JComponent {
 	
 	ConsoleBuilder createConsole() {
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
-		engines.add(new WeakReference<ScriptEngine>(engine));
 		ConsoleBuilder builder = () -> engine; 
 		return builder.publish("inspector", this);
-	}
-	
-	void eval(String statement) {
-		for (WeakReference<ScriptEngine> wse: engines) try {
-			Object result = wse.get().eval(statement);
-			if (result!=null)	
-				System.out.println(result);
-		} catch (Exception npe) {}
 	}
 	
 	
@@ -116,7 +110,7 @@ public class EdgeListInspector extends JComponent {
 			last = e;
 			try {
 				canvasTransform.inverseTransform(e.getPoint(), mouse);
-				eval("onmove()");
+				onmove.accept(e);
 			} catch (NoninvertibleTransformException e1) { }
 		}
 
@@ -135,14 +129,19 @@ public class EdgeListInspector extends JComponent {
 		public void mouseClicked(MouseEvent e) {
 			try {
 				canvasTransform.inverseTransform(e.getPoint(), click);
-				eval("onclick()");
+				onclick.accept(e);
 				repaint();
 			} catch (NoninvertibleTransformException nte) { }
 		}
 	};
 	
+	public Edge<?> current = null;
+
 	public final Point2D.Double click = new Point2D.Double(1/0d, 1/0d);
 	public final Point2D.Double mouse = new Point2D.Double(1/0d, 1/0d);
+	
+	public Consumer<MouseEvent> onclick = e -> {};
+	public Consumer<MouseEvent> onmove = e -> {};
 	
 	public Edge<?> mesh;
 	
@@ -166,8 +165,11 @@ public class EdgeListInspector extends JComponent {
 		return new Color((Color.HSBtoRGB( edge.id*1337.1337f , .85f, 0.5f) & 0xFFFFFF)|((((int)(alpha*255))&0xFF)<<24),true);
 	}
 	
+	public HashMap<String,Edge<?>> edgeMap = new HashMap<String,Edge<?>>();
+	
 	@Override
 	protected void paintComponent(Graphics g) {
+		HashMap<String,Edge<?>> edgeMap = new HashMap<String,Edge<?>>();
 		
 		g.drawString(hud.toString(), 10, 20);
 		
@@ -213,7 +215,7 @@ public class EdgeListInspector extends JComponent {
 			while (!todo.isEmpty()) {
 				Edge<?> edge = todo.removeFirst();
 				
-				boolean selected = Edge.current == edge; 
+				boolean selected = (current == edge) || (Edge.current == edge); 
 					
 				if (drawable(edge)) {
 					if (selected)
@@ -241,6 +243,8 @@ public class EdgeListInspector extends JComponent {
 					double px = (float)((tail.x+head.x)/2-nx*rt);
 					double py = (float)((tail.y+head.y)/2-ny*rt);
 					
+					edgeMap.put(edgeLabel.toLowerCase(), edge);
+					edgeMap.put(edgeLabel, edge);
 					
 					g2.drawString(edgeLabel, (float)(px-lb.getCenterX()), (float)(py-lb.getCenterY()));
 									
@@ -356,7 +360,7 @@ public class EdgeListInspector extends JComponent {
 		
 		g2.dispose();
 		
-		
+		this.edgeMap = edgeMap;
 	}
 
 	

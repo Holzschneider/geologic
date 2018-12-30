@@ -1,7 +1,9 @@
 package de.dualuse.util.geom;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.awt.geom.Point2D;
 import java.util.stream.IntStream;
 
 import org.junit.Test;
@@ -38,4 +40,9 @@ public class EdgeTest {
 		
 	}
 
+	@Test
+	public void centroidTest() {
+				
+		assertEquals(Edges.circle(100, 100, 100, 4).centroid( Point2D.Double::new ), new Point2D.Double(100,100));
+	}
 }

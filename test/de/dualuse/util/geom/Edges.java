@@ -53,6 +53,13 @@ public class Edges {
 	}
 	
 	
+	
+	
+//	static public<T> Edge<T> strip(VertexProvider<T> c, int n, IntFunction<T> elements ) {
+//		
+//	}
+	
+	
 	public static void main(String[] args) {
 		
 		Edge<Integer> e = circle(500, 500, 300, 5);
@@ -63,9 +70,9 @@ public class Edges {
 		e.attach(v);
 		f.attach(v);
 		
-		Edge.current = e;
-		
-		new EdgeListInspectorFrame( e );
+		new EdgeListInspectorFrame( e )
+		.inspector
+		.current = e;
 		
 	}
 	
