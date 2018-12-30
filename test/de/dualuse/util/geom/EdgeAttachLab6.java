@@ -14,6 +14,7 @@ public class EdgeAttachLab6 {
 		EdgeListInspectorFrame elif = new EdgeListInspectorFrame(e);
 		elif.inspector.createConsole()
 		.publish("edge", e.twin.next.next.twin)
+		.eval("inspector.onmove = function() { inspector.current = edge.locate(inspector.mouse.x, inspector.mouse.y); }")
 		.loop();
 		
 	}
