@@ -2,6 +2,7 @@ package de.dualuse.util.geom;
 
 import java.util.Collection;
 import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -20,6 +21,8 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	
 	String label = "";
 	int id = edgeCounter++;
+	
+	static Edge<?> current = null;
 	
 	Edge<T> next;
 	Edge<T> prev;
@@ -61,15 +64,26 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 		return null;
 	}
 	
-	protected<AccumulatorType> AccumulatorType fold(Function<Edge<T>,Edge<T>> step, AccumulatorType accumulator, BiFunction<AccumulatorType,Edge<T>,AccumulatorType> reducer) {
+	
+	
+	@Deprecated
+	protected Edge<T> reduce(Function<Edge<T>,Edge<T>> step, BinaryOperator<Edge<T>> accumulator) {
+		Edge<T> e = step.apply(this);
+		return e.reduce(step, e, accumulator );
+	}
+	
+	protected Edge<T> reduce(Function<Edge<T>,Edge<T>> step, Edge<T> identity, BinaryOperator<Edge<T>> accumulator) {
+		return reduce(step, identity, accumulator);		
+	}
+	
+	protected<AccumulantType> AccumulantType reduce(Function<Edge<T>,Edge<T>> step, AccumulantType accumulant, BiFunction<AccumulantType,Edge<T>,AccumulantType> accumulator) {
 		Edge<T> cursor = this;
 		do {
-			accumulator = reducer.apply(accumulator, cursor);
+			accumulant = accumulator.apply(accumulant, cursor);
 			cursor = step.apply(cursor);
 		} while (cursor!=this);
-		return accumulator;
+		return accumulant;
 	}
-
 
 	
 	public <CollectionType extends Collection<? super Vertex<T>>> CollectionType collectVertices(CollectionType collector) {
@@ -81,18 +95,23 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 		
 		return collector;
 	}
-	
-	
+
+	protected boolean isDetached() { return node == null; }
+	protected boolean isUnipolar() { return this==next; }
+	protected boolean isBipolar() { return this!=next && this==next.next; }
+	protected boolean isForwardTriangle() { return next.next.next == this ; }
+	protected boolean isBackwardTriangle() { return prev.prev.prev == this ; }
+	protected boolean isTriangle() { return isForwardTriangle() && isBackwardTriangle(); }
 	
 	public boolean contains(final double px, final double py) {
-		final Vertex<T> a = node, b = next.node, c = prev.node;
-		if (a==b || b==c || a==c) // uni or bipolar mesh
-			return true;
-		else
-		if (next.next.next == this)
-			return triangleIntersects(px, py, a.x, a.y, b.x, b.y, c.x, c.y);
-		else 
-			throw new IllegalArgumentException("not a triangle");
+//		if ( this==next|| this==next.next ) // uni or bipolar mesh
+//			return true;
+//		else
+//		if (isForwardTriangle()) 
+//			return triangleIntersects(px, py, node.x, node.y, next.node.x, next.node.y, next.next.node.x, next.next.node.y);
+//		else
+//			return false;
+			return reduce(e->e.next, 0, (i,e)->i+(linesIntersect(px, py, px, 1/0d, e.node.x, e.node.y, e.next.node.x, e.next.node.y)?1:0) )%2==1;
 	}
 	
 	
@@ -120,6 +139,13 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 		
 		in.next.prev = in;
 		out.prev.next = out;
+		
+		return this;
+	}
+	
+	
+	public Edge<T> locate(double px, double py) {
+		
 		
 		return this;
 	}
