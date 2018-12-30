@@ -41,15 +41,7 @@ public class EdgeAttachLab {
 		
 		//////////////
 
-		
-//		ab.attach(250, 260, "H");
-		
-		Vertex<String> h = new Vertex<String>(100,650,"H");
-		
-		cb.attach( h );
-		ac.attach( h );
-		ba.attach( h );
-		EdgeListInspector.showInspector(ba, EdgeAttachLab.class.getSimpleName());
+		new EdgeListInspectorFrame(ba, EdgeAttachLab.class.getSimpleName());
 
 		
 	}

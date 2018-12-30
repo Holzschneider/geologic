@@ -13,21 +13,33 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.Line2D;
+import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.ref.WeakReference;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashSet;
 
+import javax.script.ScriptContext;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import javax.swing.JComponent;
-import javax.swing.JFrame;
 import javax.swing.Timer;
 
 import de.dualuse.util.Geometry;
@@ -35,9 +47,51 @@ import de.dualuse.util.Geometry;
 
 
 public class EdgeListInspector extends JComponent {
-
 	private static final long serialVersionUID = 1L;
 	
+	
+	ArrayList<WeakReference<ScriptEngine>> engines = new ArrayList<WeakReference<ScriptEngine>>(); 
+	
+	interface ConsoleBuilder {
+		ScriptEngine engine();
+		
+		default ConsoleBuilder publish(String name, Object value) {
+			engine().getBindings(ScriptContext.ENGINE_SCOPE).put(name, value);
+			return this;
+		}
+		
+		default void loop() throws IOException {
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))) {
+				for (String line = br.readLine(), last = line; line!=null; line = br.readLine()) try {
+					Object result = engine().eval(last=(line.isEmpty()?last:line));
+					if (result!=null)
+						System.out.println(" -> "+result);
+				} catch (ScriptException ex) {
+					System.err.println(ex);
+				}
+			}
+		}
+	}
+	
+	ConsoleBuilder createConsole() {
+		ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
+		engines.add(new WeakReference<ScriptEngine>(engine));
+		ConsoleBuilder builder = () -> engine; 
+		return builder.publish("inspector", this);
+	}
+	
+	void eval(String statement) {
+		for (WeakReference<ScriptEngine> wse: engines) try {
+			Object result = wse.get().eval(statement);
+			if (result!=null)	
+				System.out.println(result);
+		} catch (Exception npe) {}
+	}
+	
+	
+	public Object hud = "";
+	
+	/////////////
 	
 	public final AffineTransform canvasTransform = new AffineTransform();
 	private final AffineTransform deltaTransform = new AffineTransform();
@@ -45,7 +99,7 @@ public class EdgeListInspector extends JComponent {
 	private MouseWheelListener zoomer = new MouseWheelListener() {
 		public void mouseWheelMoved(MouseWheelEvent me) {
 			double scale = pow(1.0337, -me.getWheelRotation());
-			
+
 			deltaTransform.setToIdentity();
 			deltaTransform.translate(+me.getX(), +me.getY());
 			deltaTransform.scale(scale, scale);
@@ -59,7 +113,13 @@ public class EdgeListInspector extends JComponent {
 	
 	private MouseMotionListener panner = new MouseMotionListener() {
 		MouseEvent last;
-		public void mouseMoved(MouseEvent e) { last = e; }
+		public void mouseMoved(MouseEvent e) { 
+			last = e;
+			try {
+				canvasTransform.inverseTransform(e.getPoint(), mouse);
+				eval("onmove()");
+			} catch (NoninvertibleTransformException e1) { }
+		}
 
 		public void mouseDragged(MouseEvent e) {
 			if (last!=null) {
@@ -71,7 +131,19 @@ public class EdgeListInspector extends JComponent {
 		}
 	};
 	
-
+	private MouseListener clicker = new MouseAdapter() {
+		@Override
+		public void mouseClicked(MouseEvent e) {
+			try {
+				canvasTransform.inverseTransform(e.getPoint(), click);
+				eval("onclick()");
+				repaint();
+			} catch (NoninvertibleTransformException nte) { }
+		}
+	};
+	
+	public final Point2D.Double click = new Point2D.Double(1/0d, 1/0d);
+	public final Point2D.Double mouse = new Point2D.Double(1/0d, 1/0d);
 	
 	public Edge<?> mesh;
 	
@@ -83,10 +155,11 @@ public class EdgeListInspector extends JComponent {
 	public EdgeListInspector() {
 		addMouseWheelListener(zoomer);
 		addMouseMotionListener(panner);
+		addMouseListener(clicker);
 		repainter.start();
 	}	
 	
-	Timer repainter = new Timer(500, e->repaint());
+	Timer repainter = new Timer(50, e->repaint());
 	
 	double R = 20, D = 4;
 	
@@ -96,8 +169,10 @@ public class EdgeListInspector extends JComponent {
 	
 	@Override
 	protected void paintComponent(Graphics g) {
-		Graphics2D g2 = Graphics2D.class.cast(g.create());
 		
+		g.drawString(hud.toString(), 10, 20);
+		
+		Graphics2D g2 = Graphics2D.class.cast(g.create());
 		
 		g2.transform(canvasTransform);
 		g2.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
@@ -108,9 +183,13 @@ public class EdgeListInspector extends JComponent {
 		double A = 8, H = A/3, O = A*2;
 		R = 50; D = 6;
 //		S = 1;
+		
 //		S *= 1.337;
+		
+		
 
 		BasicStroke solid = new BasicStroke(2*S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL);
+		BasicStroke selectedSolid = new BasicStroke(4*S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL);
 //		BasicStroke dotted = new BasicStroke(2*S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1, new float[] { 1*S,3*S }, 0);
 //		BasicStroke shifted = new BasicStroke(2*S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1, new float[] { 1*S,3*S }, 2*S );
 		BasicStroke dotted = new BasicStroke(2*S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1, new float[] { 3*S }, 0);
@@ -135,7 +214,11 @@ public class EdgeListInspector extends JComponent {
 			while (!todo.isEmpty()) {
 				Edge<?> edge = todo.removeFirst();
 				
+				boolean selected = Edge.current == edge; 
+					
 				if (drawable(edge)) {
+					if (selected)
+						g2.setStroke(selectedSolid);
 					
 					line(S, edge, tail, head);
 					double x0 = tail.x, y0 = tail.y;
@@ -264,6 +347,13 @@ public class EdgeListInspector extends JComponent {
 			}
 			
 		}
+
+		double L = S*5;
+		g2.setStroke(solid);
+		g2.setColor(Color.BLACK);
+		g2.translate(click.getX(), click.getY());
+		g2.draw(new Line2D.Double(-L, -L, +L, +L));
+		g2.draw(new Line2D.Double(-L, +L, +L, -L));
 		
 		g2.dispose();
 		
@@ -289,29 +379,6 @@ public class EdgeListInspector extends JComponent {
 	
 	
 	
-	static EdgeListInspector showInspector(Edge<?> e, String title) {
-		
-		int SIZE = 800;
-		Bounds b = Bounds.EMPTY;
-		for (Vertex<?> v: e.collectVertices(new HashSet<Vertex<?>>()))
-			b = b.extend(v.x, v.y);
-		
-		b = b.grow(100);
-		
-		double scale = SIZE/max(b.x.spread(),b.y.spread());
-		
-		EdgeListInspector eli = new EdgeListInspector(e);
-		eli.canvasTransform.scale(scale, scale);
-		eli.canvasTransform.translate(-b.x.min, -b.y.min);
-		
-		
-		JFrame f = new JFrame(title);
-		f.setContentPane(eli);
-		f.setBounds(100, 100, SIZE, SIZE);
-		f.setVisible(true);
-		
-		return eli;
-	}
 	
 	
 	public static void main(String[] args) {
@@ -354,6 +421,12 @@ public class EdgeListInspector extends JComponent {
 		
 		//////////////
 
-		showInspector(ba,EdgeListInspector.class.getSimpleName());
+		new EdgeListInspectorFrame(ba,EdgeListInspector.class.getSimpleName());
 	}
 }
+
+
+
+
+
+

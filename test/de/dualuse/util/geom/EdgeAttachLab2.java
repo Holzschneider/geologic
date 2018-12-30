@@ -41,7 +41,7 @@ public class EdgeAttachLab2 {
 		
 		//////////////
 
-		EdgeListInspector.showInspector(ba, EdgeAttachLab2.class.getSimpleName());
+		new EdgeListInspectorFrame(ba, EdgeAttachLab2.class.getSimpleName());
 		
 //		ab.attach(250, 260, "H");
 		
