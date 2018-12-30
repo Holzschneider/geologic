@@ -115,7 +115,6 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	protected boolean isBackwardTriangle() { return prev.prev.prev == this ; }
 	protected boolean isTriangle() { return isForwardTriangle() && isBackwardTriangle(); }
 	protected boolean intersects(double x0, double y0, double x1, double y1) {
-		System.out.println(this+" intersects "+linesIntersect(prev.node.x, prev.node.y, node.x, node.y, x0, y0, x1, y1) );
 		return linesIntersect(prev.node.x, prev.node.y, node.x, node.y, x0, y0, x1, y1);
 	}
 	
@@ -178,26 +177,18 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	}
 	
 	public static Edge<?> current = null;
-	static<Q> Edge<Q> highlight(Edge<Q> e) { 
-		current = e; 
-		return e; 
-	};
 	
-	//edge.locate(inspector.click.x, inspector.click.y)
 	public Edge<T> locate(double qx, double qy) {
-		highlight(this);
-		if (this.contains(qx,qy)) 
-			return reduceLoop( this, (a,b) -> { highlight(b); return b.node.isCloserTo(qx, qy).than( a.node ) ? b : a;} );
+		//if target is inside current edge loop 
+		if (this.contains(qx,qy))
+			//finds the node's edge which is closest to target q 
+			return reduceLoop( this, (a,b) -> b.node.isCloserTo(qx, qy).than( a.node ) ? b : a );
 		
-//		int n = reduceLoop( 0, (i,e) -> i+1 );
-//		double cx = reduceLoop( 0.0, (sx,e) -> sx+e.node.x ) / n;
-//		double cy = reduceLoop( 0.0, (sy,e) -> sy+e.node.y ) / n;
-//		Edge<T> guess = reduceLoop( null, (a,b) -> a==null || b.intersects(cx, cy, qx, qy) && b.node.isCloserTo(qx, qy).than(a.node)?b:a);
+		//computes a centroid, then loops over edges and keeps the closest one that intersects the line between centroid and target point q  
+		Edge<T> guess = centroid( (cx,cy) -> reduceLoop( null, (a,b) -> b.intersects(cx, cy, qx, qy) && (a==null || b.node.isCloserTo(qx, qy).than(a.node))?b:a ) );
 		
-		System.out.println(centroid( Point2D.Double::new ));
-		
-		Edge<T> guess = centroid( (cx,cy) -> reduceLoop( null, (a,b) -> {highlight(b); return b.intersects(cx, cy, qx, qy) && (a==null || b.node.isCloserTo(qx, qy).than(a.node))?b:a;} ) );
-		return highlight(guess.twin.locate(qx, qy));
+		//locates the edge loop that contains it on the twin side of it
+		return guess.twin.locate(qx, qy);
 	}
 	
 	

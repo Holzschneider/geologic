@@ -54,10 +54,7 @@ public class Location {
 	}
 	
 	public LocationComparable isCloserTo(double x, double y) {
-		return that -> {
-			System.out.println(this+ " isCloserThan "+that);
-			return this.quadrance(x,y)<that.quadrance(x, y);
-		};
+		return that -> this.quadrance(x,y)<that.quadrance(x, y);
 	}
 	
 }
