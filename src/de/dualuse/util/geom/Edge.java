@@ -4,40 +4,37 @@ import java.util.Collection;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
-public class Edge<T> /*implements LocalMap<T>*/ {
+import javax.swing.text.Highlighter.Highlight;
+
+abstract public class Edge<T extends Location> /*implements LocalMap<T>*/ {
+	
+	static String PREFIX = Edge.class.getSimpleName();
 	
 	@Override
 	public String toString() {
 		if (node!=null && prev!=null && prev.node!=null)
-			return "Edge"+id+"("+prev.node.value.toString()+node.value.toString()+")";
+			return PREFIX+"("+prev.node.toString()+node.toString()+")";
 		else
-			return "Edge"+id;
+			return PREFIX;
 	}
 	
-	static int edgeCounter = 0;
-	
-	public String label = "";
-	public int id = edgeCounter++;
 	
 	public Edge<T> next;
 	public Edge<T> prev;
 	public Edge<T> twin;
 	
-	public Vertex<T> node = null;
+	public T node = null;
 	
 	//////////////////////////////
 	
 	public Edge() { }
-	public Edge(String label) { this.label = label; };
-	public Edge(Vertex<T> v) { this.node = v; }
+	public Edge(T v) { this.node = v; }
 	
-	protected Edge<T> createEdge() {
-		return new Edge<T>();
-	}
+	abstract protected Edge<T> createEdge();
+	protected Edge<T> self() { return this; }
 	
 	protected Vertex<T> createVertex(double x, double y, T value) {
 		return new Vertex<T>(x,y,value);
@@ -50,15 +47,15 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	private Predicate<Edge<T>> looped() { return e->e==this; };
 
 	public Edge<T> findForward(Predicate<Edge<T>> stop) { return find(stop, forward()); }
-	public Edge<T> find( Predicate<Edge<T>> stop, Function<Edge<T>,Edge<T>> step ) {
-		for( Edge<T> cursor = this;;cursor = step.apply(cursor) )
+	public Edge<T> find( Predicate<Edge<T>> stop, UnaryOperator<Edge<T>> step ) {
+		for( Edge<T> cursor = self();;cursor = step.apply(cursor) )
 			if (stop.test(cursor))
 				return cursor;
 	}
 	
 	public Edge<T> walkLoop( Consumer<Edge<T>> visitor ) { return walk( looped(), forward(), visitor); }
-	public Edge<T> walk(Predicate<Edge<T>> stop, Function<Edge<T>,Edge<T>> step, Consumer<Edge<T>> visitor) {
-		Edge<T> cursor = this;
+	public Edge<T> walk(Predicate<Edge<T>> stop, UnaryOperator<Edge<T>> step, Consumer<Edge<T>> visitor) {
+		Edge<T> cursor = self();
 		
 		do {
 			visitor.accept(cursor);
@@ -70,7 +67,7 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	
 	@Deprecated
 	public Edge<T> reduce(Predicate<Edge<T>> stop, UnaryOperator<Edge<T>> step, BinaryOperator<Edge<T>> accumulator) {
-		Edge<T> e = step.apply(this);
+		Edge<T> e = step.apply(self());
 		return e.reduce(stop, step, e, accumulator );
 	}
 	
@@ -83,7 +80,7 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	{ return reduce( looped(), forward(), accumulant, accumulator); }
 	
 	public<A> A reduce(Predicate<Edge<T>> stop, UnaryOperator<Edge<T>> step, A accumulant, BiFunction<A,Edge<T>,A> accumulator) {
-		Edge<T> cursor = this;
+		Edge<T> cursor = self();
 		do {
 			accumulant = accumulator.apply(accumulant, cursor);
 			cursor = step.apply(cursor);
@@ -93,11 +90,11 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	
 
 	
-	public <CollectionType extends Collection<? super Vertex<T>>> CollectionType collect(CollectionType collector) {
+	public <CollectionType extends Collection<? super T>> CollectionType collect(CollectionType collector) {
 		return collectVertices(collector);
 	}
 	
-	public <CollectionType extends Collection<? super Vertex<T>>> CollectionType collectVertices(CollectionType collector) {
+	public <CollectionType extends Collection<? super T>> CollectionType collectVertices(CollectionType collector) {
 		if (collector.contains(this.node))
 			return collector;
 		
@@ -107,46 +104,39 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 		return collector;
 	}
 
-	protected boolean isDetached() { return node == null || prev==null || prev.node == null; }
-	protected boolean isUnipolar() { return this==next; }
-	protected boolean isBipolar() { return this!=next && this==next.next; }
+	public boolean isDetached() { return node == null || prev==null || prev.node == null; }
+	public boolean isUnipolar() { return this==next; }
+	public boolean isBipolar() { return this!=next && this==next.next; }
 	protected boolean isForwardTriangle() { return next.next.next == this ; }
 	protected boolean isBackwardTriangle() { return prev.prev.prev == this ; }
 	protected boolean isTriangle() { return isForwardTriangle() && isBackwardTriangle(); }
-	protected boolean intersects(double x0, double y0, double x1, double y1) {
+	public  boolean intersects(double x0, double y0, double x1, double y1) {
 		return linesIntersect(prev.node.x, prev.node.y, node.x, node.y, x0, y0, x1, y1);
 	}
 	
-	protected int orientationTo(double px, double py) {
-		return relativeCCW(node.x, node.y, prev.node.x, prev.node.y, px, py);
-	}
-	
+	public int orientationTo(double px, double py) { return relativeCCW(node.x, node.y, prev.node.x, prev.node.y, px, py); }
+	public int size() { return reduceLoop( 0, (acc,edge)->acc+1 ); }
+	public double length() { return reduceLoop( 0.0, (acc,edge)->acc+edge.node.distance(edge.prev.node.x, edge.prev.node.y) ); }
 	
 	///https://stackoverflow.com/questions/1165647/how-to-determine-if-a-list-of-polygon-points-are-in-clockwise-order
 	public double area() {
 		return reduceLoop( 0.0, (acc,edge)->acc+(edge.next.node.x-edge.node.x)*(edge.next.node.y+edge.node.y) )/2;
 	}
 	
-	
 	public interface CentroidDefinition<C> { C defineCentroid(double x, double y); }
 	public<C> C centroid(CentroidDefinition<C> c) {
-		return next.centroid(c, this, node.x, node.y, 1);
+		return next.centroid(c, self(), node.x, node.y, 1);
 	}
 	
-	private<C> C centroid(CentroidDefinition<C> c, Edge<T> end, double sx, double sy, int n) {
-		if (end!=this) return next.centroid(c, end, sx+node.x, sy+node.y, n+1);
-		else return c.defineCentroid(sx/n, sy/n);
+	protected<C> C centroid(CentroidDefinition<C> c, Edge<T> end, double sx, double sy, int n) {
+		if (end!=this) 
+			return next.centroid(c, end, sx+node.x, sy+node.y, n+1);
+		else 
+			return c.defineCentroid(sx/n, sy/n);
 	}
 	
 	
 	public boolean contains(final double px, final double py) {
-//		if ( this==next|| this==next.next ) // uni or bipolar mesh
-//			return true;
-//		else
-//		if (isForwardTriangle()) 
-//			return triangleIntersects(px, py, node.x, node.y, next.node.x, next.node.y, next.next.node.x, next.next.node.y);
-//		else
-//			return false;
 		return reduceLoop(0, (i,e)->i+(e.intersects(px, py, px, 1/0d)?1:0) )  %2 == (area()<0?1:0);
 	}
 	
@@ -168,7 +158,7 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	 * @return this
 	 */
 	
-	public Edge<T> attach(Vertex<T> vertex) {
+	protected Edge<T> attach(T vertex) {
 		//create the edges
 		Edge<T> in = this.createEdge();
 		Edge<T> out = this.createEdge();
@@ -185,7 +175,7 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 		
 		//connect to the star of this node
 		out.next = this.next;
-		in.prev = this;
+		in.prev = self();
 		in.next = out;
 		
 		this.next.prev = out;
@@ -198,8 +188,18 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 		in.next.prev = in;
 		out.prev.next = out;
 		
-		return this;
+		return self();
 	}
+
+	native protected Edge<T> detach(T vertex);
+	
+	static Edge<?> current = null;
+	private Edge<T> highlight(Edge<T> h) {
+		current = h;
+		return h;
+	}
+	
+	
 	
 //
 //	static public Edge<?> current = null;

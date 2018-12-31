@@ -136,7 +136,8 @@ public class EdgeListInspector extends JComponent {
 	};
 	
 	public Edge<?> current = null;
-
+	public HashSet<Object> selected = new HashSet<>();
+	
 	public final Point2D.Double click = new Point2D.Double(1/0d, 1/0d);
 	public final Point2D.Double mouse = new Point2D.Double(1/0d, 1/0d);
 	
@@ -162,7 +163,7 @@ public class EdgeListInspector extends JComponent {
 	double R = 20, D = 4;
 	
 	private static Color colorForEdge(Edge<?> edge, float alpha) {
-		return new Color((Color.HSBtoRGB( edge.id*1337.1337f , .85f, 0.5f) & 0xFFFFFF)|((((int)(alpha*255))&0xFF)<<24),true);
+		return new Color((Color.HSBtoRGB( System.identityHashCode(edge)*1337.1337f , .85f, 0.5f) & 0xFFFFFF)|((((int)(alpha*255))&0xFF)<<24),true);
 	}
 	
 	public HashMap<String,Edge<?>> edgeMap = new HashMap<String,Edge<?>>();
@@ -208,17 +209,17 @@ public class EdgeListInspector extends JComponent {
 			
 			Point2D.Double head = new Point2D.Double(), tail = new Point2D.Double();
 			HashSet<Edge<?>> edges = new HashSet<Edge<?>>();
-			HashSet<Vertex<?>> vertices = new HashSet<Vertex<?>>();
+			HashSet<Location> vertices = new HashSet<Location>();
 			ArrayDeque<Edge<?>> todo = new ArrayDeque<>();
 			todo.add(mesh); edges.add(mesh);
 			
 			while (!todo.isEmpty()) {
 				Edge<?> edge = todo.removeFirst();
 				
-				boolean selected = (current == edge); //|| (Edge.current == edge); 
+				boolean isSelected = (current == edge) || selected.contains(edge) || (Edge.current == edge); 
 					
 				if (drawable(edge)) {
-					if (selected)
+					if (isSelected)
 						g2.setStroke(selectedSolid);
 					
 					line(S, edge, tail, head);
@@ -237,7 +238,7 @@ public class EdgeListInspector extends JComponent {
 
 					g2.setColor(colorForEdge(edge,1));
 					
-					String edgeLabel = edge.prev.node.value.toString()+edge.node.value.toString();
+					String edgeLabel = edge.prev.node.toString()+edge.node.toString();
 					Rectangle2D lb = g2.getFontMetrics().getStringBounds(edgeLabel, g2);
 					double rt = max(lb.getMaxX(),lb.getMaxY());
 					double px = (float)((tail.x+head.x)/2-nx*rt);
@@ -249,6 +250,7 @@ public class EdgeListInspector extends JComponent {
 					g2.drawString(edgeLabel, (float)(px-lb.getCenterX()), (float)(py-lb.getCenterY()));
 									
 					g2.draw(line);
+					
 					
 					vertices.add( edge.node );
 					g2.setStroke(dotted);
@@ -342,8 +344,8 @@ public class EdgeListInspector extends JComponent {
 			}
 			
 			g2.setColor(new Color(0, 0, 0,0.2f));
-			for (Vertex<?> v: vertices) {
-				String label = ""+(""+v.value).charAt(0);
+			for (Location v: vertices) {
+				String label = ""+v.toString().charAt(0);
 				g2.draw(new Ellipse2D.Double(v.x-(R-1)*S, v.y-(R-1)*S, 2*(R-1)*S, 2*(R-1)*S));
 				Rectangle2D r = g2.getFontMetrics().getStringBounds(label, g2);
 				g2.drawString(label, (float)(v.x-r.getCenterX()), (float)(v.y-r.getCenterY()-1));
@@ -384,48 +386,48 @@ public class EdgeListInspector extends JComponent {
 	
 	
 	
-	public static void main(String[] args) {
-
-		Vertex<String> a = new Vertex<String>(100, 100, "A");
-		Vertex<String> b = new Vertex<String>(500, 200, "B");
-		Vertex<String> c = new Vertex<String>(200, 400, "C");
-		
-		Edge<String> ab = new Edge<String>("ab");
-		Edge<String> bc = new Edge<String>("bc");
-		Edge<String> ca = new Edge<String>("ca");
-		
-//		(((ca.next = ab).prev = ca).node = a).star = ca;
-//		(((ab.next = bc).prev = ab).node = b).star = ab;
-//		(((bc.next = ca).prev = bc).node = c).star = bc;
-		((ca.next = ab).prev = ca).node = a;
-		((ab.next = bc).prev = ab).node = b;
-		((bc.next = ca).prev = bc).node = c;
-		
-		Edge<String> ba = new Edge<String>("BA");
-		Edge<String> cb = new Edge<String>("CB");
-		Edge<String> ac = new Edge<String>("AC");
-		
-		(ba.twin = ab).twin = ba;
-		(cb.twin = bc).twin = cb;
-		(ac.twin = ca).twin = ac;
-		
-		ac.next = ca.prev.twin;
-		cb.next = bc.prev.twin;
-		ba.next = ab.prev.twin;
-
-		ac.prev = ca.next.twin;
-		cb.prev = bc.next.twin;
-		ba.prev = ab.next.twin;
-		
-		ac.node = c;
-		cb.node = b;
-		ba.node = a;
-		
-		
-		//////////////
-
-		new EdgeListInspectorFrame(ba,EdgeListInspector.class.getSimpleName());
-	}
+//	public static void main(String[] args) {
+//
+//		Vertex<String> a = new Vertex<String>(100, 100, "A");
+//		Vertex<String> b = new Vertex<String>(500, 200, "B");
+//		Vertex<String> c = new Vertex<String>(200, 400, "C");
+//		
+//		Edge<String> ab = new Edge<String>("ab");
+//		Edge<String> bc = new Edge<String>("bc");
+//		Edge<String> ca = new Edge<String>("ca");
+//		
+////		(((ca.next = ab).prev = ca).node = a).star = ca;
+////		(((ab.next = bc).prev = ab).node = b).star = ab;
+////		(((bc.next = ca).prev = bc).node = c).star = bc;
+//		((ca.next = ab).prev = ca).node = a;
+//		((ab.next = bc).prev = ab).node = b;
+//		((bc.next = ca).prev = bc).node = c;
+//		
+//		Edge<String> ba = new Edge<String>("BA");
+//		Edge<String> cb = new Edge<String>("CB");
+//		Edge<String> ac = new Edge<String>("AC");
+//		
+//		(ba.twin = ab).twin = ba;
+//		(cb.twin = bc).twin = cb;
+//		(ac.twin = ca).twin = ac;
+//		
+//		ac.next = ca.prev.twin;
+//		cb.next = bc.prev.twin;
+//		ba.next = ab.prev.twin;
+//
+//		ac.prev = ca.next.twin;
+//		cb.prev = bc.next.twin;
+//		ba.prev = ab.next.twin;
+//		
+//		ac.node = c;
+//		cb.node = b;
+//		ba.node = a;
+//		
+//		
+//		//////////////
+//
+//		new EdgeListInspectorFrame(ba,EdgeListInspector.class.getSimpleName());
+//	}
 }
 
 

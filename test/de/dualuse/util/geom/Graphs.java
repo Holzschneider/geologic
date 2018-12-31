@@ -9,19 +9,18 @@ import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class Edges {
+public class Graphs {
 	
-	
-	static public<T> Edge<T> circle(double cx, double cy, double r, T[] elements) {
+	static public<T> Mesh<Vertex<T>> circle(double cx, double cy, double r, T[] elements) {
 		return circle(cx,cy,r, elements.length, i->elements[i]);
 	}
 
 	
-	static public Edge<Integer> circle(double cx, double cy, double r, int n) {
+	static public Mesh<Vertex<Integer>> circle(double cx, double cy, double r, int n) {
 		return circle(cx,cy,r, n, Integer::valueOf );
 	}
 
-	static public<T> Edge<T> circle(double cx, double cy, double r, int n, IntFunction<T> elements) {
+	static public<T> Mesh<Vertex<T>> circle(double cx, double cy, double r, int n, IntFunction<T> elements) {
 		return loop( i-> v -> v.define(-sin(2*i*PI/n)*r+cx,cos(2*i*PI/n)*r+cy), n, elements);
 	}
 
@@ -29,17 +28,17 @@ public class Edges {
 	interface VertexSource<T> { Vertex<T> define(double x, double y); } 
 	interface VertexProducer<T> { Vertex<T> get(VertexSource<T> cs); }
 	interface VertexProvider<T> { VertexProducer<T> coordiantes(int n); }
-	static public<T> Edge<T> loop(VertexProvider<T> c, int n, IntFunction<T> elements ) {
+	static public<T> Mesh<Vertex<T>> loop(VertexProvider<T> c, int n, IntFunction<T> elements ) {
 		List<Vertex<T>> vertices = IntStream.range(0, n)
 				.mapToObj( i -> c.coordiantes(i).get( Vertex<T>::new ).value( elements.apply(i) ) )
 				.collect(Collectors.toList());
 
-		List<Edge<T>> edges = IntStream.range(0, n)
-				.mapToObj( i -> new Edge<T>(vertices.get(i)) )
+		List<Mesh<Vertex<T>>> edges = IntStream.range(0, n)
+				.mapToObj( i -> new Mesh<Vertex<T>>(vertices.get(i)) )
 				.collect(Collectors.toList());
 		
-		List<Edge<T>> twins = IntStream.range(0, n)
-				.mapToObj( i -> new Edge<T>(vertices.get((i+n-1)%n)) )
+		List<Mesh<Vertex<T>>> twins = IntStream.range(0, n)
+				.mapToObj( i -> new Mesh<Vertex<T>>(vertices.get((i+n-1)%n)) )
 				.collect(Collectors.toList());
 		
 		IntStream.range(0, n).forEach( i-> edges.get(i).next = edges.get( (i+1)%n ) );
@@ -52,18 +51,11 @@ public class Edges {
 		return edges.get(0);
 	}
 	
-	
-	
-	
-//	static public<T> Edge<T> strip(VertexProvider<T> c, int n, IntFunction<T> elements ) {
-//		
-//	}
-	
-	
+		
 	public static void main(String[] args) {
 		
-		Edge<Integer> e = circle(500, 500, 300, 5);
-		Edge<Integer> d = e.prev, f = e.next;
+		Edge<Vertex<Integer>> e = circle(500, 500, 300, 5);
+		Edge<Vertex<Integer>> d = e.prev, f = e.next;
 		
 		Vertex<Integer> v = new Vertex<Integer>(500,500, 6);
 		d.attach(v);

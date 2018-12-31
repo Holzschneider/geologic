@@ -2,8 +2,8 @@ package de.dualuse.util.geom;
 
 public class EdgeAttachLab7 {
 	public static void main(String[] args) throws Exception {
-		Edge<Integer> e = Edges.circle(500, 500, 400, 5);
-		Edge<Integer> d = e.prev, f = e.next;
+		Edge<Vertex<Integer>> e = Graphs.circle(500, 500, 400, 5);
+		Edge<Vertex<Integer>> d = e.prev, f = e.next;
 		
 		Vertex<Integer> v = new Vertex<Integer>(400, 400, 6);
 		d.attach(v);
@@ -26,13 +26,18 @@ public class EdgeAttachLab7 {
 		
 		////
 		
+		Edge<Vertex<Integer>> start = e.twin.next.next.twin;
 		
+		elif.inspector.click.setLocation(325, 870);
+//		start.locate(325, 870);
 		
-		elif.inspector.createConsole()
-		.publish("edge", e.twin.next.next.twin)
-		.eval("inspector.onmove = function() { inspector.current = edge.locate(inspector.mouse.x, inspector.mouse.y); }")
-		.loop();
+//		elif.inspector.selected.add(start);
 		
+//		elif.inspector.createConsole()
+//		.publish("edge", start)
+//		.eval("inspector.onmove = function() { inspector.hud=inspector.mouse.x+\",\"+inspector.mouse.y; inspector.current = edge.locate(inspector.mouse.x, inspector.mouse.y); }")
+//		.loop();
+//		
 		
 	
 	}

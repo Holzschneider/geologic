@@ -25,7 +25,8 @@ public class Vertex<T> extends Location implements Serializable {
 
 	@Override
 	public String toString() {
-		return "Vertex( "+value+" @ "+x+", "+y+" )";
+//		return "Vertex( "+value+" @ "+x+", "+y+" )";
+		return value.toString();
 	}
 
 	

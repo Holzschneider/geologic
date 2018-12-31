@@ -44,7 +44,7 @@ public class EdgeListInspectorFrame extends JFrame {
 		
 		int SIZE = min(width,height);
 		Bounds b = Bounds.EMPTY;
-		for (Vertex<?> v: e.collect(new HashSet<Vertex<?>>()))
+		for (Location v: e.collect(new HashSet<Location>()))
 			b = b.extend(v.x, v.y);
 		
 		

@@ -3,21 +3,21 @@ package de.dualuse.util.geom;
 public class EdgeAttachLab5 {
 	public static void main(String[] args) throws Exception {
 		
-		Vertex<String> a = new Vertex<String>(100, 100, "A");
-		Vertex<String> b = new Vertex<String>(500, 200, "B");
-		Vertex<String> c = new Vertex<String>(200, 400, "C");
+		VertexLabel a = new VertexLabel(100, 100, "A");
+		VertexLabel b = new VertexLabel(500, 200, "B");
+		VertexLabel c = new VertexLabel(200, 400, "C");
 		
-		Edge<String> ab = new Edge<String>("ab");
-		Edge<String> bc = new Edge<String>("bc");
-		Edge<String> ca = new Edge<String>("ca");
+		Mesh<VertexLabel> ab = new Mesh<VertexLabel>();
+		Mesh<VertexLabel> bc = new Mesh<VertexLabel>();
+		Mesh<VertexLabel> ca = new Mesh<VertexLabel>();
 		
 		((ca.next = ab).prev = ca).node = a;
 		((ab.next = bc).prev = ab).node = b;
 		((bc.next = ca).prev = bc).node = c;
 		
-		Edge<String> ba = new Edge<String>("BA");
-		Edge<String> cb = new Edge<String>("CB");
-		Edge<String> ac = new Edge<String>("AC");
+		Mesh<VertexLabel> ba = new Mesh<VertexLabel>();
+		Mesh<VertexLabel> cb = new Mesh<VertexLabel>();
+		Mesh<VertexLabel> ac = new Mesh<VertexLabel>();
 		
 		(ba.twin = ab).twin = ba;
 		(cb.twin = bc).twin = cb;
@@ -37,7 +37,7 @@ public class EdgeAttachLab5 {
 		
 		//////////////
 
-		Vertex<String> h = new Vertex<String>(100,650,"H");
+		VertexLabel h = new VertexLabel(100,650,"H");
 		
 		cb.attach( h );
 		ac.attach( h );
