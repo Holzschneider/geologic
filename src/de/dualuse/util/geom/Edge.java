@@ -1,6 +1,5 @@
 package de.dualuse.util.geom;
 
-import java.awt.geom.Point2D;
 import java.util.Collection;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
@@ -118,6 +117,10 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 		return linesIntersect(prev.node.x, prev.node.y, node.x, node.y, x0, y0, x1, y1);
 	}
 	
+	protected int orientationTo(double px, double py) {
+		return relativeCCW(node.x, node.y, prev.node.x, prev.node.y, px, py);
+	}
+	
 	
 	///https://stackoverflow.com/questions/1165647/how-to-determine-if-a-list-of-polygon-points-are-in-clockwise-order
 	public double area() {
@@ -148,25 +151,47 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 	}
 	
 	
+	/**
+	 * Attaches <em>given vertex<em> to this edge.
+	 * <p />
+	 * 
+	 * Assumes the <em>vertex</em> to be <em>enclosed</em> by this edge-loop. 
+	 * <ul>
+	 * <li>creates two new edges, the inward and outward leading edges</li>
+	 * <li>points the inward edge to the given vertex and the outward edge to the edge's vertex </li>
+	 * <li>connects the edges to themselves as twins of each other</li>
+	 * <li>connects the edges to the star of <em>this node</em></li>
+	 * <li>connects the edges to the star of the <em>given vertex</em></li>
+	 * </ul>
+	 * 
+	 * @param vertex
+	 * @return this
+	 */
+	
 	public Edge<T> attach(Vertex<T> vertex) {
-		Edge<T> that = this; 
+		//create the edges
+		Edge<T> in = this.createEdge();
+		Edge<T> out = this.createEdge();
 		
-		Edge<T> in = that.createEdge();
-		Edge<T> out = that.createEdge();
 		
+		//connect to vertices
 		in.node = vertex;
+		out.node = this.node;
+		
+		
+		//connect to themselves
 		in.twin = in.next = out;
 		out.prev = out.twin = in;
 		
-		out.next = that.next;
-		in.prev = that;
+		//connect to the star of this node
+		out.next = this.next;
+		in.prev = this;
 		in.next = out;
 		
-		that.next.prev = out;
-		that.next = in;
+		this.next.prev = out;
+		this.next = in;
 		
-		out.node = that.node;
-		
+		//connect to the star of the given vertex
 		in.next  = in .find( e->e.prev.node==vertex, backward() );
 		out.prev = out.find( e->e.node==vertex, forward() );
 		
@@ -176,64 +201,75 @@ public class Edge<T> /*implements LocalMap<T>*/ {
 		return this;
 	}
 	
-	public static Edge<?> current = null;
-	
-	public Edge<T> locate(double qx, double qy) {
-		//if target is inside current edge loop 
-		if (this.contains(qx,qy))
-			//finds the node's edge which is closest to target q 
-			return reduceLoop( this, (a,b) -> b.node.isCloserTo(qx, qy).than( a.node ) ? b : a );
-		
-		//computes a centroid, then loops over edges and keeps the closest one that intersects the line between centroid and target point q  
-		Edge<T> guess = centroid( (cx,cy) -> reduceLoop( null, (a,b) -> b.intersects(cx, cy, qx, qy) && (a==null || b.node.isCloserTo(qx, qy).than(a.node))?b:a ) );
-		
-		//locates the edge loop that contains it on the twin side of it
-		return guess.twin.locate(qx, qy);
-	}
-	
-	
-	
-//	public Edge<T> locate(final double qx, final double qy) {
-//		if (this.twin == this) //XXX allow detached functions to work
-//			return next.locate(qx, qy);
-//		
-//		if (this.contains(qx,qy)) { //wenn das Dreieck die qx,qy enthält
-//			//alle (drei) in frage kommenden Knoten überprüfen
-//			Edge<T> closest = this; 
-//			double dx = closest.node.x-qx, dy = closest.node.y-qy;
-//			double distanceSq = dx*dx+dy*dy;
+//
+//	static public Edge<?> current = null;
+//	
+//	public Edge<T> locate(double qx, double qy) {
+//		try {
+//			return _locate(qx, qy);
+//		} catch (Exception ex) {
+//			ex.printStackTrace();
+//			System.out.println(qx+", "+qy);
 //			
-//			for (Edge<T> e = this.next;e!=this;e=e.next) {
-//				dx = e.node.x-qx; dy = e.node.y-qy;
-//				double dSq = dx*dx+dy*dy;
-//				if (dSq>distanceSq) continue;
-//				
-//				closest = e;
-//				distanceSq = dSq;
-//			}
-//			
-//			return closest; //den nächsten zurückgeben
+//			return this;
 //		}
-//		
-//		//andernfalls weiter in Richtung Zielkoordinate wandern
-//		final Vertex<T> a = this.node, b = next.node, c = prev.node;
-//		final double mx = (a.x+b.x+c.x)/3.0, my = (a.y+b.y+c.y)/3.0;
-//		
-//		//schließlich schneidet der Weg vom Dreiecksmittelpunkt
-//		//zum Ziel garantiert eine Kante, die uns dem Ziel näher bringt  
-//		if (linesIntersect(	mx, my, qx, qy, a.x,a.y, b.x,b.y) )
-//			return next.twin.locate(qx,qy);
-//		//else
-//		if (linesIntersect(	mx, my, qx, qy, b.x, b.y, c.x, c.y) )
-//			return prev.twin.locate(qx,qy);
-//		//else
-//		if (linesIntersect(	mx, my, qx, qy, c.x, c.y, a.x, a.y) )
-//			return this.twin.locate(qx,qy);
-//		
-//		return null; // keine geschnitten? -> null
 //	}
-
+//	
+//	public Edge<T> _locate(double qx, double qy) {
+//		//if target is inside current edge loop 
+//		if (this.contains(qx,qy))
+//			//finds the node's edge which is closest to target q 
+//			return reduceLoop( this, (a,b) -> b.node.isCloserTo(qx, qy).than(a.node) ? b : a );
+//		
+//		//computes a centroid, then loops over edges and keeps the closest one that intersects the line between centroid and target point q  
+//		Edge<T> guess = centroid( (cx,cy) -> reduceLoop( null, (a,b) -> b.intersects(cx, cy, qx, qy) && (a==null || b.node.isCloserTo(qx, qy).than(a.node))?b:a ) );
+//		//XXX may return null as intersects fails if point is on line (= find solution for degenerate cases)
+//		
+//		//locates the edge loop that contains it on the twin side of it
+//		
+//		return guess.twin._locate(qx, qy);
+//	}
+//	
+//	
+//	private Edge<T> highlight(Edge<T> e) {
+//		current = e;
+//		return e;
+//	}
+//	
+//	
+//	/**
+//	 * Attaches a given vertex to all vertices of the locally convex portion of this edge's loop 
+//	 * @param v
+//	 * @return
+//	 */
+//	public Edge<T> mesh( Vertex<T> v ) {
+//		Edge<T> next = this.next, prev = this.prev;
+//		attach(v);
+//
+//
+//		//memorize this' next and prev, as topology changes due to insertion
+//		int prevOrientation = orientationTo(v.x, v.y); 
+//		int nextOrientation = next.orientationTo(v.x, v.y);
+//		
+//		prev.walk( 
+//				e-> highlight(e.next).orientationTo(v.x, v.y)!=prevOrientation || e.node==v, 
+//				backward(), 
+//				e-> highlight( e.attach(v)) 
+//		);
+//		
+//		
+//		highlight(next);
+//		next.walk( 
+//				e->highlight(e).orientationTo(v.x, v.y)!=nextOrientation || e.next.node==v, 
+//				e->highlight(e.next.twin.next), // as it has been modified 
+//				e->highlight(e.attach(v)) );
+//		
+//		
+//		return this;
+//	}
+//	
 	
+		
 	
 	
 	

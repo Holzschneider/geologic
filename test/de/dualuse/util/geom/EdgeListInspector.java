@@ -215,7 +215,7 @@ public class EdgeListInspector extends JComponent {
 			while (!todo.isEmpty()) {
 				Edge<?> edge = todo.removeFirst();
 				
-				boolean selected = (current == edge) || (Edge.current == edge); 
+				boolean selected = (current == edge); //|| (Edge.current == edge); 
 					
 				if (drawable(edge)) {
 					if (selected)
