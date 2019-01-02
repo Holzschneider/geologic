@@ -9,6 +9,8 @@ import java.util.function.UnaryOperator;
 
 import javax.swing.text.Highlighter.Highlight;
 
+import de.dualuse.util.Geometry;
+
 abstract public class Edge<T extends Location> /*implements LocalMap<T>*/ {
 	
 	static String PREFIX = Edge.class.getSimpleName();
@@ -34,7 +36,7 @@ abstract public class Edge<T extends Location> /*implements LocalMap<T>*/ {
 	public Edge(T v) { this.node = v; }
 	
 	abstract protected Edge<T> createEdge();
-	protected Edge<T> self() { return this; }
+	protected Edge<T> self() { return this.next.prev; }
 	
 	protected Vertex<T> createVertex(double x, double y, T value) {
 		return new Vertex<T>(x,y,value);
@@ -95,7 +97,7 @@ abstract public class Edge<T extends Location> /*implements LocalMap<T>*/ {
 	}
 	
 	public <CollectionType extends Collection<? super T>> CollectionType collectVertices(CollectionType collector) {
-		if (collector.contains(this.node))
+		if (collector.contains(self().node))
 			return collector;
 		
 		collector.add(this.node);
@@ -159,6 +161,7 @@ abstract public class Edge<T extends Location> /*implements LocalMap<T>*/ {
 	 */
 	
 	protected Edge<T> attach(T vertex) {
+
 		//create the edges
 		Edge<T> in = this.createEdge();
 		Edge<T> out = this.createEdge();
@@ -182,6 +185,9 @@ abstract public class Edge<T extends Location> /*implements LocalMap<T>*/ {
 		this.next = in;
 		
 		//connect to the star of the given vertex
+//		for( in.next  = in ; in.next.prev.node!=vertex; in.next = in.next.prev );
+//		for( out.prev = out; out.prev.node!=vertex    ; out.prev = out.prev.next );
+		
 		in.next  = in .find( e->e.prev.node==vertex, backward() );
 		out.prev = out.find( e->e.node==vertex, forward() );
 		
@@ -191,14 +197,189 @@ abstract public class Edge<T extends Location> /*implements LocalMap<T>*/ {
 		return self();
 	}
 
-	native protected Edge<T> detach(T vertex);
+	protected Edge<T> detach() {
+		Edge<T> prev = this.prev, twin = this.twin;
+		
+		//detach by connecting the star's neighboring edges to each other 
+		this.twin.prev.next = this.next;
+		this.next.prev = this.twin.prev;
+		
+		this.twin.next.prev = prev;
+		prev.next = this.twin.next;
+		
+		//re-attaching own's and twin's connections to themselves 
+		this.next = this.twin = this.prev = this;
+		twin.next = twin.twin = twin.prev = twin;
+		
+		return this;
+	}
+	
+	
+	protected Edge<T> detachStar() {
+		Edge<T> star = next.twin;
+		this.detach();
+		
+		return star==this?this:star.detachStar();
+	}
+	
+
+	/**
+	 * Attaches a given vertex to all vertices of the locally convex portion of this edge's loop. 
+	 * This makes the attachStar functionality inside-outside safe
+	 * @param v
+	 * @return
+	 */
+	protected Edge<T> attachLoop(T v) {
+		
+		for (Edge<T> right=this;
+				right.next.node!=v && 
+				right.orientationTo(v.x, v.y)>0;
+				right=right.next.twin.next) 
+			right.attach(v);
+		
+		for(Edge<T> left=this;
+				left.prev.prev.node!=v && 
+				left.orientationTo(v.x, v.y)>0;
+				left = left.prev.twin.prev)
+			left.prev.attach(v);
+		
+		return this;
+	}
+
+	protected Edge<T> fixStar(Edge<T> stop) {
+		
+		if (this!=stop)
+			twin.prev.fixStar(stop);
+		
+		prev.twin.fix();
+		prev.fix();
+		
+		return this;
+	}
+	
+	
+//	protected Edge<T> mesh(double px, double py) {
+//		
+//		for (Edge<T> current = this;!current.isTriangle();current = current.prev)
+//			if (relativeCCW(current.node.x, current.node.y, current.next.next.node.x, current.next.next.node.y, px, py)<0)
+//				current.attach(current.next.next.node);
+//		
+//		return this;
+//	}
+
+	protected Edge<T> fixLoop(Edge<T> stop) {
+		
+//		if (this!=stop)
+//			twin.prev.fixStar(stop);
+//		
+//		prev.twin.fix();
+//		prev.fix();
+		
+		return this;
+	}
+
+	protected Edge<T> mesh(double px, double py) {
+		if (this.isTriangle())
+			return this;
+		
+		if (relativeCCW(this.node.x, this.node.y, this.next.next.node.x, this.next.next.node.y, px, py)<0)
+			this.attach(this.next.next.node);
+		
+		prev.mesh(px,py);
+//		this.fix();
+		
+		return this;
+	}
+	
+	
+//	ep.fix(); //fix
+//	if (epi!=null) epi.fix();
+//	ein.fix();
+//	if (eini!=null) eini.fix();
+//	enip.fix();
+//	if (enipi!=null) enipi.fix();
 	
 	static Edge<?> current = null;
-	private Edge<T> highlight(Edge<T> h) {
+	static<Q extends Edge<?>> Q highlight(Q h) {
 		current = h;
 		return h;
 	}
 	
+	protected void fix() {
+		if (
+				this.isTriangle() && 
+				twin.isTriangle() && 
+				circumcircleContains( twin.next.node.x, twin.next.node.y )
+			) 
+		{
+			flip(); //Kante flippen
+
+			Edge<T> next = this.next;
+			Edge<T> prev = this.prev;
+
+			Edge<T> twin = this.twin;
+			Edge<T> twinNext=this.twin.next;
+			Edge<T> twinPrev=this.twin.prev;
+
+			next.fix(); //fix auf nachfolgerkante
+			prev.fix(); //vorg�ngerkante
+
+			twin.fix(); //auf umkehrkante 
+			twinNext.fix(); //nachfolger der Umkehrkante
+			twinPrev.fix(); //vorg�nger der Umkehrkante anwenden
+		}
+	}
+	
+	protected Edge<T> flip() {
+		if (!isTriangle() || !twin.isTriangle()) {
+			System.out.println("blö");
+			return this;
+		}
+		
+		final Edge<T> self = this;
+		final Edge<T> next = this.next;
+		final Edge<T> prev = this.prev;
+
+		final Edge<T> twin = this.twin;
+		final Edge<T> twinNext = this.twin.next;
+		final Edge<T> twinPrev = this.twin.prev;
+		
+		self.node = next.node;
+		self.next = prev;
+		self.prev = twinNext;
+		
+		twin.node = twinNext.node;
+		twin.next = twinPrev ;
+		twin.prev = next;
+		
+		
+		prev.next = twinNext;
+		prev.prev = self;
+		
+		twinNext.prev = prev;
+		twinNext.next = self;
+		
+		twinPrev .next = next;
+		twinPrev .prev = twin;
+		
+		next.next = twin;
+		next.prev = twinPrev;
+		
+		return this;
+	}
+	
+	public boolean circumcircleContains(double qx, double qy) {
+		return insideCircumcircle(qx,qy, node.x, node.y, next.node.x, next.node.y, prev.node.x, prev.node.y);
+	}
+	
+	public boolean circumcircleContainsReally(double qx, double qy) {
+		System.out.println( qx+", "+qy+" is in ");
+		System.out.println( node.x+", "+node.y +": "+this);
+		System.out.println( next.node.x+", "+next.node.y +": "+next );
+		System.out.println( prev.node.x+", "+prev.node.y +": "+prev);
+		return insideCircumcircle(qx,qy, node.x, node.y, next.node.x, next.node.y, prev.node.x, prev.node.y);
+	}
+
 	
 	
 //
@@ -237,39 +418,7 @@ abstract public class Edge<T extends Location> /*implements LocalMap<T>*/ {
 //	}
 //	
 //	
-//	/**
-//	 * Attaches a given vertex to all vertices of the locally convex portion of this edge's loop 
-//	 * @param v
-//	 * @return
-//	 */
-//	public Edge<T> mesh( Vertex<T> v ) {
-//		Edge<T> next = this.next, prev = this.prev;
-//		attach(v);
-//
-//
-//		//memorize this' next and prev, as topology changes due to insertion
-//		int prevOrientation = orientationTo(v.x, v.y); 
-//		int nextOrientation = next.orientationTo(v.x, v.y);
-//		
-//		prev.walk( 
-//				e-> highlight(e.next).orientationTo(v.x, v.y)!=prevOrientation || e.node==v, 
-//				backward(), 
-//				e-> highlight( e.attach(v)) 
-//		);
-//		
-//		
-//		highlight(next);
-//		next.walk( 
-//				e->highlight(e).orientationTo(v.x, v.y)!=nextOrientation || e.next.node==v, 
-//				e->highlight(e.next.twin.next), // as it has been modified 
-//				e->highlight(e.attach(v)) );
-//		
-//		
-//		return this;
-//	}
-//	
-	
-		
+
 	
 	
 	

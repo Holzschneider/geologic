@@ -1,9 +1,7 @@
 package de.dualuse.util.geom;
 
-import java.io.IOException;
-
-public class EdgeAttachLab4 {
-	public static void main(String[] args) throws IOException {
+public class EdgeLab3 {
+	public static void main(String[] args) {
 		
 		VertexLabel a = new VertexLabel(100, 100, "A");
 		VertexLabel b = new VertexLabel(500, 200, "B");
@@ -13,6 +11,9 @@ public class EdgeAttachLab4 {
 		Mesh<VertexLabel> bc = new Mesh<VertexLabel>();
 		Mesh<VertexLabel> ca = new Mesh<VertexLabel>();
 		
+//		(((ca.next = ab).prev = ca).node = a).star = ca;
+//		(((ab.next = bc).prev = ab).node = b).star = ab;
+//		(((bc.next = ca).prev = bc).node = c).star = bc;
 		((ca.next = ab).prev = ca).node = a;
 		((ab.next = bc).prev = ab).node = b;
 		((bc.next = ca).prev = bc).node = c;
@@ -40,24 +41,15 @@ public class EdgeAttachLab4 {
 		
 		//////////////
 
-		VertexLabel h = new VertexLabel(100,650,"H");
+		new EdgeListInspectorFrame(ba, EdgeLab3.class.getSimpleName());
 		
-		cb.attach( h );
-		ac.attach( h );
-		ba.attach( h );
+//		ab.attach(250, 260, "H");
 		
-		//////////////////////
+		VertexLabel h = new VertexLabel(250,250,"H");
 		
-		EdgeListInspectorFrame elif = new EdgeListInspectorFrame(ba);
-		elif.inspector.createConsole()
-		.publish("ab", ab)
-		.publish("bc", bc)
-		.publish("ca", ca)
-		.publish("ba", ba)
-		.publish("cb", cb)
-		.publish("ac", ac)
-		.publish("h", h)
-		.loop();
+		bc.attach( h );
+		ab.attach( h );
+		ca.attach( h );
 		
 		
 	}

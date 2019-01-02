@@ -1,7 +1,9 @@
 package de.dualuse.util.geom;
 
-public class EdgeAttachLab5 {
-	public static void main(String[] args) throws Exception {
+import java.io.IOException;
+
+public class EdgeLab4 {
+	public static void main(String[] args) throws IOException {
 		
 		VertexLabel a = new VertexLabel(100, 100, "A");
 		VertexLabel b = new VertexLabel(500, 200, "B");
@@ -35,6 +37,7 @@ public class EdgeAttachLab5 {
 		cb.node = b;
 		ba.node = a;
 		
+		
 		//////////////
 
 		VertexLabel h = new VertexLabel(100,650,"H");
@@ -43,17 +46,9 @@ public class EdgeAttachLab5 {
 		ac.attach( h );
 		ba.attach( h );
 		
-		///
-		
-		ac.next.twin.next = ca;
-		ca.prev = ac.next.twin;
-		ab.next = cb.next;
-		cb.next.prev = ab;
-		
 		//////////////////////
 		
 		EdgeListInspectorFrame elif = new EdgeListInspectorFrame(ba);
-		elif.setLocation(2700, 100);
 		elif.inspector.createConsole()
 		.publish("ab", ab)
 		.publish("bc", bc)
@@ -62,9 +57,8 @@ public class EdgeAttachLab5 {
 		.publish("cb", cb)
 		.publish("ac", ac)
 		.publish("h", h)
-		.publish("edge", ab)
-		.eval("inspector.onmove = function() { inspector.hud = edge.contains(inspector.mouse.x,inspector.mouse.y); }") 
 		.loop();
+		
 		
 	}
 }

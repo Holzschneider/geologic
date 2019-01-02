@@ -1,7 +1,7 @@
 package de.dualuse.util.geom;
 
-public class EdgeAttachLab3 {
-	public static void main(String[] args) {
+public class EdgeLab5 {
+	public static void main(String[] args) throws Exception {
 		
 		VertexLabel a = new VertexLabel(100, 100, "A");
 		VertexLabel b = new VertexLabel(500, 200, "B");
@@ -11,9 +11,6 @@ public class EdgeAttachLab3 {
 		Mesh<VertexLabel> bc = new Mesh<VertexLabel>();
 		Mesh<VertexLabel> ca = new Mesh<VertexLabel>();
 		
-//		(((ca.next = ab).prev = ca).node = a).star = ca;
-//		(((ab.next = bc).prev = ab).node = b).star = ab;
-//		(((bc.next = ca).prev = bc).node = c).star = bc;
 		((ca.next = ab).prev = ca).node = a;
 		((ab.next = bc).prev = ab).node = b;
 		((bc.next = ca).prev = bc).node = c;
@@ -38,19 +35,36 @@ public class EdgeAttachLab3 {
 		cb.node = b;
 		ba.node = a;
 		
-		
 		//////////////
 
-		new EdgeListInspectorFrame(ba, EdgeAttachLab3.class.getSimpleName());
+		VertexLabel h = new VertexLabel(100,650,"H");
 		
-//		ab.attach(250, 260, "H");
+		cb.attach( h );
+		ac.attach( h );
+		ba.attach( h );
 		
-		VertexLabel h = new VertexLabel(250,250,"H");
+		///
 		
-		bc.attach( h );
-		ab.attach( h );
-		ca.attach( h );
+		ac.next.twin.next = ca;
+		ca.prev = ac.next.twin;
+		ab.next = cb.next;
+		cb.next.prev = ab;
 		
+		//////////////////////
+		
+		EdgeListInspectorFrame elif = new EdgeListInspectorFrame(ba);
+		elif.setLocation(2700, 100);
+		elif.inspector.createConsole()
+		.publish("ab", ab)
+		.publish("bc", bc)
+		.publish("ca", ca)
+		.publish("ba", ba)
+		.publish("cb", cb)
+		.publish("ac", ac)
+		.publish("h", h)
+		.publish("edge", ab)
+		.eval("inspector.onmove = function() { inspector.hud = edge.contains(inspector.mouse.x,inspector.mouse.y); }") 
+		.loop();
 		
 	}
 }

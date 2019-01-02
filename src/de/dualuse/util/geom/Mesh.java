@@ -7,8 +7,6 @@ public class Mesh<T extends Location> extends Graph<T> {
 	
 	@Override protected Mesh<T> createEdge() { return new Mesh<>(); }
 	
-	@Override public Mesh<T> attach(T vertex) { return (Mesh<T>) super.attach(vertex); }
-	@Override public Mesh<T> detach(T vertex) { return (Mesh<T>) super.detach(vertex); }
 	
 	
 	@Override
@@ -24,11 +22,11 @@ public class Mesh<T extends Location> extends Graph<T> {
 	
 	
 	@SuppressWarnings("unchecked")
-	public Edge<T> locate(double qx, double qy) {
+	public Mesh<T> locate(double qx, double qy) {
 		//if target is inside current edge loop 
 		if (this.contains(qx,qy)) 
 			//finds the node's edge which is closest to target q 
-			return (Edge<T>) reduceLoop( self(), (a,b) -> b.node.isCloserTo(qx, qy).than(a.node) ? b: a);
+			return (Mesh<T>) reduceLoop( self(), (a,b) -> b.node.isCloserTo(qx, qy).than(a.node) ? b: a);
 		
 		//computes a centroid, then loops over edges and keeps the closest one that intersects the line between centroid and target point q  
 		Edge<T> guess = centroid( (cx,cy) -> reduceLoop( null, (a,b) -> b.intersects(cx, cy, qx, qy) && (a==null || b.node.isCloserTo(qx, qy).than(a.node))?b:a ) );
@@ -37,7 +35,10 @@ public class Mesh<T extends Location> extends Graph<T> {
 		//locates the edge loop that contains it on the twin side of it
 		return Mesh.class.cast(guess.twin).locate(qx, qy);
 	}
-	
+
+	@Override public Mesh<T> attach(T vertex) { return (Mesh<T>) super.attach(vertex); }
+	@Override public Mesh<T> detach() { return (Mesh<T>) super.detach(); }
+
 	
 	
 //	/**

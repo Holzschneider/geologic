@@ -1,6 +1,6 @@
 package de.dualuse.util.geom;
 
-public class EdgeAttachLab2 {
+public class EdgeLab1 {
 	public static void main(String[] args) {
 		
 		VertexLabel a = new VertexLabel(100, 100, "A");
@@ -41,16 +41,8 @@ public class EdgeAttachLab2 {
 		
 		//////////////
 
-		new EdgeListInspectorFrame(ba, EdgeAttachLab2.class.getSimpleName());
-		
-//		ab.attach(250, 260, "H");
-		
-		VertexLabel h = new VertexLabel(250,250,"H");
-		
-		bc.attach( h );
-		ab.attach( h );
-		ca.attach( h );
-		
+		new EdgeListInspectorFrame(ba, EdgeLab1.class.getSimpleName());
+
 		
 	}
 }

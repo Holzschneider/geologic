@@ -1,6 +1,6 @@
 package de.dualuse.util.geom;
 
-public class EdgeAttachLab7 {
+public class EdgeLab7 {
 	public static void main(String[] args) throws Exception {
 		Edge<Vertex<Integer>> e = Graphs.circle(500, 500, 400, 5);
 		Edge<Vertex<Integer>> d = e.prev, f = e.next;

@@ -163,7 +163,7 @@ public class EdgeListInspector extends JComponent {
 	double R = 20, D = 4;
 	
 	private static Color colorForEdge(Edge<?> edge, float alpha) {
-		return new Color((Color.HSBtoRGB( System.identityHashCode(edge)*1337.1337f , .85f, 0.5f) & 0xFFFFFF)|((((int)(alpha*255))&0xFF)<<24),true);
+		return new Color((Color.HSBtoRGB( System.identityHashCode(edge)/1337.1337f , .85f, 0.875f) & 0xFFFFFF)|((((int)(alpha*255))&0xFF)<<24),true);
 	}
 	
 	public HashMap<String,Edge<?>> edgeMap = new HashMap<String,Edge<?>>();
@@ -183,11 +183,10 @@ public class EdgeListInspector extends JComponent {
 		
 		float S = 1/(float)canvasTransform.getScaleX();
 		double A = 8, H = A/3, O = A*2;
-		R = 50; D = 6;
+		R = 60; D = 6;
+
 //		S = 1;
-		
 //		S *= 1.337;
-		
 		
 
 		BasicStroke solid = new BasicStroke(2*S, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL);
